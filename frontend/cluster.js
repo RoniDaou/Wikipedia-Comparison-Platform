@@ -35,6 +35,7 @@ const State = {
 
 window.addEventListener("DOMContentLoaded", () => {
   loadCountrySelects();
+  loadFeatureList();
   loadMatrixList(true); /* true = auto-select the most recent matrix */
   loadResultsList();
   loadStats();
@@ -289,6 +290,8 @@ const SECS_PER_PAIR = 1.5;
 
 let _allCountries = []; /* full list from DB */
 let _selected = new Set();
+let _allFeatures = []; /* available infobox fields from DB */
+let _selectedFeatures = new Set();
 
 async function loadCountrySelects() {
   try {
@@ -328,6 +331,11 @@ function _buildPickerList(countries) {
       }
       _updatePickerCount();
       updateEstimate();
+      if (
+        document.getElementById("matrix-mode-select")?.value === "feature_ted"
+      ) {
+        loadFeatureList();
+      }
     });
 
     item.appendChild(cb);
@@ -374,6 +382,9 @@ function applyPreset(name) {
   /* rebuild so checkboxes reflect new state */
   _buildPickerList(_allCountries);
   updateEstimate();
+  if (document.getElementById("matrix-mode-select")?.value === "feature_ted") {
+    loadFeatureList();
+  }
 }
 
 function updateEstimate() {
@@ -427,6 +438,142 @@ function _populateExploreSelect(countries) {
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
+   FEATURE-FILTERED TED MATRIX OPTIONS
+══════════════════════════════════════════════════════════════════════════ */
+
+function getFeatureScopeCountries() {
+  // Country selection remains the main clustering scope.
+  // If no countries are selected, the matrix builder uses all countries,
+  // so the feature selector also falls back to all countries.
+  return _selected.size > 0 ? Array.from(_selected) : [];
+}
+
+async function loadFeatureList() {
+  try {
+    const params = new URLSearchParams();
+    getFeatureScopeCountries().forEach((country) => {
+      params.append("countries", country);
+    });
+
+    const url = params.toString()
+      ? `${API}/api/cluster/features?${params.toString()}`
+      : `${API}/api/cluster/features`;
+
+    const res = await fetch(url);
+    const data = await res.json();
+    _allFeatures = data.features || [];
+
+    // If the user changes the country selection, remove features that are
+    // no longer present in the chosen countries.
+    _selectedFeatures = new Set(
+      Array.from(_selectedFeatures).filter((feature) =>
+        _allFeatures.includes(feature),
+      ),
+    );
+  } catch (e) {
+    console.error("Failed to load infobox features:", e);
+    _allFeatures = [];
+  }
+  renderFeatureList(_allFeatures);
+}
+
+function toggleMatrixMode() {
+  const mode =
+    document.getElementById("matrix-mode-select")?.value || "full_ted";
+  const section = document.getElementById("feature-filter-section");
+  const incrementalBtn = document.getElementById("extend-matrix-btn");
+
+  if (section)
+    section.style.display = mode === "feature_ted" ? "block" : "none";
+  if (mode === "feature_ted") {
+    loadFeatureList();
+  }
+  if (incrementalBtn) {
+    incrementalBtn.disabled = mode === "feature_ted";
+    incrementalBtn.title =
+      mode === "feature_ted"
+        ? "Incremental extension is available only for full TED matrices."
+        : "Extend the selected full TED matrix with new countries.";
+  }
+}
+
+function renderFeatureList(features) {
+  const list = document.getElementById("feature-list");
+  if (!list) return;
+
+  list.innerHTML = "";
+  if (!features.length) {
+    list.innerHTML =
+      '<p class="saved-empty" style="padding:12px">No fields found yet. Scrape countries first, then refresh.</p>';
+    updateFeatureCount();
+    return;
+  }
+
+  features.forEach((feature) => {
+    const item = document.createElement("label");
+    item.className =
+      "picker-item" + (_selectedFeatures.has(feature) ? " checked" : "");
+    item.dataset.name = feature.toLowerCase();
+
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = feature;
+    cb.checked = _selectedFeatures.has(feature);
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        _selectedFeatures.add(feature);
+        item.classList.add("checked");
+      } else {
+        _selectedFeatures.delete(feature);
+        item.classList.remove("checked");
+      }
+      updateFeatureCount();
+    });
+
+    item.appendChild(cb);
+    item.appendChild(document.createTextNode(feature));
+    list.appendChild(item);
+  });
+
+  updateFeatureCount();
+}
+
+function filterFeatureList() {
+  const q = (
+    document.getElementById("feature-search")?.value || ""
+  ).toLowerCase();
+  const filtered = _allFeatures.filter((f) => f.toLowerCase().includes(q));
+  renderFeatureList(filtered);
+}
+
+function updateFeatureCount() {
+  const el = document.getElementById("feature-count");
+  if (el) el.textContent = `${_selectedFeatures.size} selected`;
+}
+
+function selectAllVisibleFeatures() {
+  document
+    .querySelectorAll("#feature-list .picker-item:not(.hidden) input")
+    .forEach((cb) => {
+      cb.checked = true;
+      _selectedFeatures.add(cb.value);
+      cb.closest(".picker-item")?.classList.add("checked");
+    });
+  updateFeatureCount();
+}
+
+function clearSelectedFeatures() {
+  _selectedFeatures.clear();
+  document
+    .querySelectorAll("#feature-list .picker-item input")
+    .forEach((cb) => {
+      cb.checked = false;
+      cb.closest(".picker-item")?.classList.remove("checked");
+    });
+  updateFeatureCount();
+}
+
+/* ══════════════════════════════════════════════════════════════════════════
    SIMILARITY MATRIX — list, build, select, delete
 ══════════════════════════════════════════════════════════════════════════ */
 
@@ -466,12 +613,18 @@ function _renderMatrixList(matrices) {
       const countries =
         (m.countries || []).slice(0, 6).join(", ") +
         (m.countries?.length > 6 ? ` … +${m.countries.length - 6} more` : "");
+      const modeLabel =
+        m.matrix_mode === "feature_ted"
+          ? `Feature-filtered TED · ${(m.selected_features || []).length} feature${(m.selected_features || []).length === 1 ? "" : "s"}`
+          : "Full TED";
+      const featureTitle = (m.selected_features || []).join(", ");
       return `
       <div class="saved-card ${isActive ? "saved-card-active" : ""}" id="mcard-${m._id}">
         <div class="saved-card-main">
           <div class="saved-card-title">${m.name || "Unnamed matrix"}</div>
           <div class="saved-card-meta">
             <span class="saved-badge">${m.count} countries</span>
+            <span class="saved-badge" title="${escapeHtml(featureTitle)}">${modeLabel}</span>
             <span class="saved-date">${fmtDate(m.saved_at)}</span>
           </div>
           <div class="saved-card-countries" title="${(m.countries || []).join(", ")}">
@@ -526,6 +679,16 @@ async function deleteMatrixById(matrixId) {
 async function buildMatrix(force = false) {
   const countries = _selected.size > 0 ? Array.from(_selected) : null;
   const name = document.getElementById("matrix-name-input")?.value.trim() || "";
+  const matrixMode =
+    document.getElementById("matrix-mode-select")?.value || "full_ted";
+  const selectedFeatures = Array.from(_selectedFeatures);
+
+  if (matrixMode === "feature_ted" && selectedFeatures.length === 0) {
+    alert(
+      "Please select at least one feature for feature-filtered TED clustering.",
+    );
+    return;
+  }
 
   if (!countries) {
     const n = _allCountries.length;
@@ -544,7 +707,9 @@ async function buildMatrix(force = false) {
     "matrix-status-bar",
     "building",
     "🔄",
-    `Building new matrix${countries ? ` (${countries.length} countries)` : ""}…`,
+    matrixMode === "feature_ted"
+      ? `Building feature-filtered TED matrix (${selectedFeatures.length} feature${selectedFeatures.length === 1 ? "" : "s"})…`
+      : `Building full TED matrix${countries ? ` (${countries.length} countries)` : ""}…`,
   );
   showBuildProgress(0, 0, "");
 
@@ -552,7 +717,12 @@ async function buildMatrix(force = false) {
     const res = await fetch(`${API}/api/cluster/build-matrix`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ countries, name }),
+      body: JSON.stringify({
+        countries,
+        name,
+        matrix_mode: matrixMode,
+        features: matrixMode === "feature_ted" ? selectedFeatures : [],
+      }),
     });
     const data = await res.json();
     if (!data.success) {
@@ -566,6 +736,14 @@ async function buildMatrix(force = false) {
 }
 
 async function buildMatrixIncremental() {
+  const matrixMode =
+    document.getElementById("matrix-mode-select")?.value || "full_ted";
+  if (matrixMode === "feature_ted") {
+    alert(
+      "Incremental extension is only supported for full TED matrices. Build a new feature-filtered TED matrix instead.",
+    );
+    return;
+  }
   if (!State.activeMatrixId) {
     alert("Select a base matrix first (from the list above).");
     return;
@@ -685,9 +863,13 @@ function syncClusterMatrixCheck() {
   if (!bar) return;
   if (State.activeMatrixId && State.fullMatrix) {
     const n = State.fullMatrix.count;
+    const modeLabel =
+      State.fullMatrix.matrix_mode === "feature_ted"
+        ? `Feature-filtered TED (${(State.fullMatrix.selected_features || []).length} feature${(State.fullMatrix.selected_features || []).length === 1 ? "" : "s"})`
+        : "Full TED";
     bar.className = "matrix-status-bar matrix-status-ready";
     bar.innerHTML = `<span class="status-icon">✅</span>
-      <span class="status-text">Matrix selected — ${n} countries · ${State.fullMatrix.name || ""}</span>`;
+      <span class="status-text">Matrix selected — ${n} countries · ${modeLabel} · ${State.fullMatrix.name || ""}</span>`;
   } else {
     bar.className = "matrix-status-bar matrix-status-unknown";
     bar.innerHTML = `<span class="status-icon">⚠️</span>
@@ -947,8 +1129,15 @@ function renderResult(result) {
       : `Agglomerative Hierarchical Clustering — ${result.n_clusters ?? "—"} clusters · ${result.linkage || "average"} linkage`;
 
   /* Meta */
+  const matrixModeInfo =
+    State.fullMatrix?.matrix_mode === "feature_ted"
+      ? `Feature-filtered TED: ${(State.fullMatrix.selected_features || []).join(", ")}`
+      : "Full TED matrix";
+
   document.getElementById("results-meta").innerHTML =
     `<span>${result.n_countries} countries</span>
+     <span>·</span>
+     <span title="${escapeHtml(matrixModeInfo)}">${matrixModeInfo.length > 60 ? matrixModeInfo.slice(0, 57) + "..." : matrixModeInfo}</span>
      <span>·</span>
      <span>${fmtDate(result.computed_at)}</span>`;
 
@@ -1097,9 +1286,9 @@ function buildDendrogramSvg(result, history) {
   if (!n)
     return '<p class="saved-empty">No countries available for dendrogram.</p>';
 
-  const width = Math.max(760, n * 58);
-  const height = 420;
-  const margin = { top: 30, right: 56, bottom: 100, left: 58 };
+  const width = Math.max(980, n * 140);
+  const height = 540;
+  const margin = { top: 55, right: 70, bottom: 130, left: 72 };
   const baselineY = height - margin.bottom;
   const plotHeight = baselineY - margin.top;
   const xStep = n > 1 ? (width - margin.left - margin.right) / (n - 1) : 0;
@@ -1117,8 +1306,26 @@ function buildDendrogramSvg(result, history) {
       2
     : Number(cutMerge?.distance) || maxDist;
 
-  const yForDistance = (distance) =>
+  const rawYForDistance = (distance) =>
     baselineY - ((Number(distance) || 0) / maxDist) * plotHeight;
+
+  // Create visually spaced Y positions for merge levels,
+  // so very close distances do not overlap visually.
+  const minMergeGapPx = 34;
+
+  history.forEach((merge, idx) => {
+    let y = rawYForDistance(Number(merge.distance) || 0);
+
+    if (idx > 0) {
+      const prevY = history[idx - 1]._displayY;
+      y = Math.min(y, prevY - minMergeGapPx);
+    }
+
+    y = Math.max(margin.top + 10, y);
+    merge._displayY = y;
+  });
+
+  const yForDistance = (distance) => rawYForDistance(distance);
   const nodes = new Map();
 
   countries.forEach((country, index) => {
@@ -1151,7 +1358,7 @@ function buildDendrogramSvg(result, history) {
     if (!left || !right) return;
 
     const parentX = (left.x + right.x) / 2;
-    const parentY = yForDistance(Number(merge.distance) || 0);
+    const parentY = merge._displayY;
     const parentId = n + Number(merge.step) - 1;
 
     parts.push(
@@ -1183,7 +1390,10 @@ function buildDendrogramSvg(result, history) {
     });
   });
 
-  const cutY = yForDistance(cutDistance);
+  const cutY = nextMerge
+    ? (((cutMerge && cutMerge._displayY) || baselineY) + nextMerge._displayY) /
+      2
+    : (cutMerge && cutMerge._displayY) || rawYForDistance(cutDistance);
   if (result.n_clusters > 1) {
     parts.push(
       `<line x1="${margin.left - 8}" y1="${cutY}" x2="${width - margin.right + 8}" y2="${cutY}" class="dendro-cut-line"/>`,
@@ -1856,20 +2066,23 @@ async function renderHeatmap() {
   wrap.innerHTML =
     '<p style="color:var(--ink-soft);padding:16px">Loading heatmap…</p>';
 
-  /* Fetch matrix metadata to get country list */
+  /* Use the matrix associated with the selected/loaded result. */
   let matrixCountries;
-  try {
-    const res = await fetch(`${API}/api/cluster/matrix-status`);
-    const data = await res.json();
-    if (!data.matrix) {
-      wrap.innerHTML =
-        '<p style="color:var(--ink-soft);padding:16px">No matrix available for heatmap.</p>';
-      return;
-    }
-    matrixCountries = data.matrix.countries;
-  } catch (_) {
+  if (State.fullMatrix && State.fullMatrix.countries) {
+    matrixCountries = State.fullMatrix.countries;
+  } else if (result.matrix_id) {
+    try {
+      const res = await fetch(`${API}/api/cluster/matrix/${result.matrix_id}`);
+      const data = await res.json();
+      if (data.success) {
+        State.fullMatrix = data.matrix;
+        matrixCountries = data.matrix.countries;
+      }
+    } catch (_) {}
+  }
+  if (!matrixCountries) {
     wrap.innerHTML =
-      '<p style="color:var(--ink-soft);padding:16px">Could not load matrix metadata.</p>';
+      '<p style="color:var(--ink-soft);padding:16px">No matrix available for heatmap.</p>';
     return;
   }
 

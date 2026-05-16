@@ -71,23 +71,74 @@ class SimilarityMatrixBuilder:
         self.comparator = comparator
         self.db = db
 
+    def _normalize_selected_features(self, selected_features: Optional[List[str]]) -> List[str]:
+        """Return a clean, de-duplicated list of requested infobox fields."""
+        if not selected_features:
+            return []
+        seen = set()
+        cleaned = []
+        for field in selected_features:
+            if field is None:
+                continue
+            key = str(field).strip()
+            if key and key not in seen:
+                seen.add(key)
+                cleaned.append(key)
+        return cleaned
+
+    def _filter_country_fields(self, country_doc: Dict, selected_features: List[str]) -> Dict:
+        """
+        Build a reduced country document containing only selected infobox fields.
+
+        This keeps the project aligned with TED-based document similarity: the
+        user controls which fields enter the semi-structured tree, but the
+        pairwise similarity is still computed by TED on that reduced tree.
+        """
+        if not selected_features:
+            return country_doc
+
+        reduced = dict(country_doc)
+        # Avoid comparing identity metadata when the user explicitly asks to
+        # cluster by selected fields. The real country names are still kept in
+        # the matrix country list; this reduced document is only used for TED.
+        reduced['country_name'] = 'country'
+        reduced.pop('source_url', None)
+
+        fields = country_doc.get('fields', {}) or {}
+        reduced['fields'] = {
+            field: fields[field]
+            for field in selected_features
+            if field in fields
+        }
+        if '_field_order' in country_doc:
+            reduced['_field_order'] = [
+                field for field in country_doc.get('_field_order', [])
+                if field in reduced['fields']
+            ]
+        return reduced
+
     # ── Public interface ───────────────────────────────────────────────
 
     def build(self,
               country_names: List[str],
-              progress_callback=None) -> Dict:
+              progress_callback=None,
+              selected_features: Optional[List[str]] = None) -> Dict:
         """
-        Compute the full N×N similarity matrix and persist it to MongoDB.
+        Compute the full N×N similarity matrix.
 
         Only the upper triangle is computed (symmetric); diagonal = 1.0.
+        When selected_features is provided, each country document is reduced to
+        those fields before the TED comparator runs.
 
         Args:
-            country_names    : ordered list of country names
-            progress_callback: optional callable(done, total, pair_info)
+            country_names     : ordered list of country names
+            progress_callback : optional callable(done, total, pair_info)
+            selected_features : optional list of infobox fields to keep before TED
 
         Returns:
             The stored matrix document (dict).
         """
+        selected_features = self._normalize_selected_features(selected_features)
         n = len(country_names)
         matrix = [[0.0] * n for _ in range(n)]
 
@@ -102,6 +153,7 @@ class SimilarityMatrixBuilder:
             data_i = self.db.get_country(country_names[i])
             if data_i:
                 data_i.pop('_id', None)
+                data_i = self._filter_country_fields(data_i, selected_features)
 
             for j in range(i + 1, n):
                 sim = 0.0
@@ -109,6 +161,7 @@ class SimilarityMatrixBuilder:
                     data_j = self.db.get_country(country_names[j])
                     if data_j:
                         data_j.pop('_id', None)
+                        data_j = self._filter_country_fields(data_j, selected_features)
 
                     if data_i and data_j:
                         result = self.comparator.compare_countries(data_i, data_j)
@@ -128,7 +181,9 @@ class SimilarityMatrixBuilder:
             'countries': country_names,
             'matrix':    matrix,
             'count':     n,
-            'built_at':  datetime.now(timezone.utc).isoformat()
+            'built_at':  datetime.now(timezone.utc).isoformat(),
+            'matrix_mode': 'feature_ted' if selected_features else 'full_ted',
+            'selected_features': selected_features
         }
         # NOTE: do NOT save here — the ClusteringPipeline.build_and_save_matrix()
         # handles saving so we never double-insert.
@@ -218,7 +273,9 @@ class SimilarityMatrixBuilder:
             'countries': merged_names,
             'matrix':    matrix,
             'count':     n_new,
-            'built_at':  datetime.now(timezone.utc).isoformat()
+            'built_at':  datetime.now(timezone.utc).isoformat(),
+            'matrix_mode': 'full_ted',
+            'selected_features': []
         }
         # NOTE: do NOT save here — ClusteringPipeline handles saving.
         print(f"[Matrix] Extended to {n_new}×{n_new}.")
@@ -256,7 +313,8 @@ class ClusteringPipeline:
 
     def build_and_save_matrix(self, country_names: Optional[List[str]] = None,
                                name: str = '',
-                               progress_callback=None) -> Dict:
+                               progress_callback=None,
+                               selected_features: Optional[List[str]] = None) -> Dict:
         """
         Build a brand-new similarity matrix and save it to the DB.
         Always creates a new document — never overwrites.
@@ -265,12 +323,13 @@ class ClusteringPipeline:
             country_names    : list to include; None = all in DB
             name             : human-readable label for this matrix
             progress_callback: callable(done, total, pair_info)
+            selected_features: optional infobox fields to keep before TED
 
         Returns:
             The saved matrix doc (includes '_id' as string).
         """
         names = country_names or sorted(self.db.get_country_names())
-        doc   = self.builder.build(names, progress_callback)
+        doc   = self.builder.build(names, progress_callback, selected_features=selected_features)
         inserted_id = self.db.save_similarity_matrix(doc, name=name)
         doc['_id']  = inserted_id
         return doc

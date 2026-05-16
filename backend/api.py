@@ -954,6 +954,56 @@ def get_un_countries_list():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+
+@app.route('/api/cluster/features', methods=['GET'])
+def get_cluster_features():
+    """
+    Return available infobox field names for the currently selected countries.
+
+    Query params:
+        ?countries=Lebanon&countries=France
+
+    If no countries are provided, the endpoint falls back to all stored countries.
+    This keeps the UI flow country-first: users choose countries, then choose
+    which fields inside those countries should be used for TED.
+    """
+    try:
+        requested_countries = request.args.getlist('countries')
+
+        # Backward-compatible fallback for comma-separated calls.
+        if not requested_countries:
+            raw = request.args.get('countries', '')
+            if raw:
+                requested_countries = [c.strip() for c in raw.split(',') if c.strip()]
+
+        country_names = requested_countries or db.get_country_names()
+
+        features = set()
+        valid_country_count = 0
+
+        for country_name in country_names:
+            doc = db.get_country(country_name)
+            if not doc:
+                doc = db.get_edited_tree(country_name)
+            if not doc:
+                continue
+
+            valid_country_count += 1
+            fields = doc.get('fields', {}) or {}
+            for field_name in fields.keys():
+                if field_name:
+                    features.add(str(field_name))
+
+        return jsonify({
+            'success': True,
+            'features': sorted(features, key=lambda x: x.lower()),
+            'count': len(features),
+            'country_count': valid_country_count,
+            'countries_scope': country_names
+        })
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ─────────────────────────────────────────────
 #  Error handlers
 # ═══════════════════════════════════════════════════════════════════════════
@@ -1006,7 +1056,9 @@ def build_similarity_matrix():
         {
             "countries":  ["Lebanon", "France", ...],  // null = all in DB
             "name":       "My Middle East set",        // optional label
-            "incremental_from": "<matrix_id>"          // optional: extend an existing matrix
+            "matrix_mode": "full_ted" | "feature_ted", // optional
+            "features":   ["population", "area", ...], // required for feature_ted
+            "incremental_from": "<matrix_id>"           // full_ted only
         }
     """
     global _matrix_build_state
@@ -1019,6 +1071,18 @@ def build_similarity_matrix():
     country_names  = data.get('countries')
     name           = data.get('name', '')
     incr_from      = data.get('incremental_from', '')   # _id of base matrix
+    matrix_mode    = data.get('matrix_mode', 'full_ted')
+    selected_features = data.get('features') or data.get('selected_features') or []
+
+    if matrix_mode not in ('full_ted', 'feature_ted'):
+        return jsonify({'success': False,
+                        'error': 'matrix_mode must be "full_ted" or "feature_ted"'}), 400
+    if matrix_mode == 'feature_ted' and not selected_features:
+        return jsonify({'success': False,
+                        'error': 'Select at least one feature for feature-filtered TED clustering.'}), 400
+    if matrix_mode == 'feature_ted' and incr_from:
+        return jsonify({'success': False,
+                        'error': 'Incremental extension is only supported for full TED matrices.'}), 400
 
     def _progress(done, total, pair_info):
         _matrix_build_state.update(done=done, total=total, last_pair=pair_info)
@@ -1036,7 +1100,8 @@ def build_similarity_matrix():
                 doc = clustering_pipeline.build_and_save_matrix(
                     country_names=country_names,
                     name=name,
-                    progress_callback=_progress)
+                    progress_callback=_progress,
+                    selected_features=selected_features if matrix_mode == 'feature_ted' else None)
             _matrix_build_state.update(finished=True, matrix_id=doc.get('_id'))
         except Exception as exc:
             _matrix_build_state.update(error=str(exc))

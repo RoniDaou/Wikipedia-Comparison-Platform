@@ -628,14 +628,14 @@
       .dendro-svg-wrap {
         overflow-x: auto;
         overflow-y: hidden;
-        padding: 8px;
+        padding: 16px;
         background: #f8fafc;
         border: 1px solid var(--border);
         border-radius: var(--radius-sm);
       }
       .dendro-svg {
         min-width: 100%;
-        height: 420px;
+        height: 540px;
         display: block;
       }
       .dendro-branch {
@@ -1366,6 +1366,82 @@
             />
           </div>
 
+          <!-- TED scope selector -->
+          <div
+            class="cluster-section-header"
+            style="margin-top: 8px; margin-bottom: 12px"
+          >
+            <span class="step-badge">TED Scope</span>
+            <h3>Choose what the TED matrix compares</h3>
+          </div>
+
+          <div class="algo-description">
+            Full TED compares every available infobox field. Feature-filtered
+            TED still uses Tree Edit Distance, but first reduces each country
+            tree to the field or fields you select.
+          </div>
+
+          <div class="param-item" style="max-width: 420px; margin-bottom: 16px">
+            <label for="matrix-mode-select">Matrix construction mode</label>
+            <select
+              id="matrix-mode-select"
+              onchange="toggleMatrixMode()"
+              style="
+                width: 100%;
+                padding: 8px 10px;
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-sm);
+                font-family: inherit;
+                font-size: 0.9rem;
+              "
+            >
+              <option value="full_ted">Full infobox TED clustering</option>
+              <option value="feature_ted">
+                Feature-filtered TED clustering
+              </option>
+            </select>
+            <span class="field-hint"
+              >First choose the countries below. Then choose whether TED uses
+              the full infobox or only selected fields from those chosen
+              countries.</span
+            >
+          </div>
+
+          <div
+            id="feature-filter-section"
+            style="display: none; margin-bottom: 18px"
+          >
+            <div class="preset-row">
+              <span class="preset-label">Feature selection:</span>
+              <button class="preset-btn" onclick="selectAllVisibleFeatures()">
+                Select visible
+              </button>
+              <button
+                class="preset-btn preset-btn-danger"
+                onclick="clearSelectedFeatures()"
+              >
+                Clear features
+              </button>
+              <button class="preset-btn" onclick="loadFeatureList()">
+                Refresh fields for selected countries
+              </button>
+            </div>
+
+            <div class="picker-wrap">
+              <div class="picker-search-row">
+                <input
+                  type="text"
+                  id="feature-search"
+                  placeholder="🔍  Search fields available in the selected countries…"
+                  oninput="filterFeatureList()"
+                  class="picker-search"
+                />
+                <span class="picker-count" id="feature-count">0 selected</span>
+              </div>
+              <div class="picker-list" id="feature-list"></div>
+            </div>
+          </div>
+
           <!-- Presets + picker -->
           <div class="estimate-banner" id="estimate-banner">
             <span id="estimate-icon">📊</span>
@@ -1424,6 +1500,7 @@
               ⚡ Build New Matrix
             </button>
             <button
+              id="extend-matrix-btn"
               class="btn btn-secondary"
               onclick="buildMatrixIncremental()"
             >
