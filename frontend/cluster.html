@@ -1,0 +1,1584 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ClusterNations — Country Infobox Clustering</title>
+    <link rel="stylesheet" href="style.css" />
+    <style>
+      /* ═══════════════════════════════════════════
+         CLUSTERING-SPECIFIC STYLES
+      ═══════════════════════════════════════════ */
+
+      /* ── Section cards ───────────────────────── */
+      .cluster-section {
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        padding: 28px 32px;
+        margin-bottom: 24px;
+        border-left: 4px solid var(--blue);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cluster-section-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .cluster-section-header h3 {
+        margin: 0;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 1.15rem;
+        color: var(--ink);
+        letter-spacing: -0.3px;
+      }
+
+      .step-badge {
+        background: var(--blue);
+        color: var(--white);
+        font-size: 0.68rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 99px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        flex-shrink: 0;
+      }
+
+      /* ── Matrix status bar ───────────────────── */
+      .matrix-status-bar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 11px 16px;
+        border-radius: var(--radius-sm);
+        font-size: 0.88rem;
+        margin-bottom: 20px;
+        border: 1px solid transparent;
+      }
+
+      .matrix-status-bar .status-icon { font-size: 1.1rem; flex-shrink: 0; }
+      .matrix-status-bar .status-text { flex: 1; }
+
+      .matrix-status-ready   { background: #f0fdf4; border-color: #86efac; color: #166534; }
+      .matrix-status-building{ background: var(--blue-light); border-color: #93c5fd; color: var(--blue-dark); }
+      .matrix-status-error   { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
+      .matrix-status-unknown { background: var(--surface); border-color: var(--border); color: var(--ink-soft); }
+
+      /* ── Matrix form row ─────────────────────── */
+      .matrix-form-row {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+        flex-wrap: wrap;
+      }
+
+      .matrix-select-group {
+        flex: 1;
+        min-width: 200px;
+      }
+
+      .matrix-select-group label {
+        display: block;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: var(--ink-mid);
+        margin-bottom: 6px;
+      }
+
+      .matrix-select-group select[multiple] {
+        width: 100%;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 6px 8px;
+        font-size: 0.85rem;
+        color: var(--ink);
+        background: var(--surface);
+        font-family: inherit;
+      }
+
+      .matrix-select-group select[multiple]:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(0,158,219,0.12);
+      }
+
+      .field-hint {
+        display: block;
+        font-size: 0.77rem;
+        color: var(--ink-soft);
+        margin-top: 5px;
+      }
+
+      .matrix-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding-top: 22px;
+        flex-shrink: 0;
+      }
+
+      /* ── Build progress ───────────────────────── */
+      .build-progress {
+        margin-top: 16px;
+        display: none;
+      }
+
+      .build-progress-info {
+        display: flex;
+        justify-content: space-between;
+        font-size: 0.82rem;
+        color: var(--ink-mid);
+        margin-bottom: 7px;
+      }
+
+      .build-progress-pair {
+        color: var(--ink-soft);
+        font-style: italic;
+        max-width: 55%;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      /* ── Algo tabs ───────────────────────────── */
+      .algo-tabs {
+        display: flex;
+        gap: 0;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--border);
+      }
+
+      .algo-tab-btn {
+        padding: 9px 24px;
+        background: none;
+        border: none;
+        border-bottom: 3px solid transparent;
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        cursor: pointer;
+        margin-bottom: -2px;
+        transition: color 0.15s, border-color 0.15s;
+      }
+
+      .algo-tab-btn.active {
+        color: var(--blue);
+        border-bottom-color: var(--blue);
+      }
+
+      .algo-tab-btn:hover:not(.active) { color: var(--ink); }
+
+      /* ── Algo description ────────────────────── */
+      .algo-description {
+        background: var(--blue-light);
+        border-left: 3px solid var(--blue);
+        padding: 11px 15px;
+        border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+        font-size: 0.875rem;
+        color: var(--ink-mid);
+        margin-bottom: 18px;
+        line-height: 1.6;
+      }
+
+      /* ── Param grid ──────────────────────────── */
+      .param-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
+        gap: 16px;
+        margin-bottom: 6px;
+      }
+
+      .param-item label {
+        display: block;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--ink-mid);
+        margin-bottom: 5px;
+      }
+
+      .param-item input[type="number"] {
+        width: 100%;
+        padding: 8px 10px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.9rem;
+        font-family: inherit;
+        color: var(--ink);
+        background: var(--surface);
+        box-sizing: border-box;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      .param-item input[type="number"]:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(0,158,219,0.12);
+      }
+
+      .btn-run {
+        margin-top: 20px;
+        padding: 11px 32px;
+        font-size: 1rem;
+        font-weight: 600;
+      }
+
+      /* ── Results header ──────────────────────── */
+      .results-meta {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: var(--ink-soft);
+        flex-wrap: wrap;
+        margin-left: auto;
+      }
+
+      .algo-pill {
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .algo-pill-kmeans { background: var(--blue-light); color: var(--blue-dark); }
+      .algo-pill-agglomerative { background: #ecfdf5; color: #065f46; }
+
+      /* ── Metrics strip ───────────────────────── */
+      .metrics-strip {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-bottom: 22px;
+      }
+
+      .metric-tile {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 13px 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 88px;
+      }
+
+      .metric-val {
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: 1.5rem;
+        color: var(--blue);
+        line-height: 1;
+      }
+
+      .metric-lbl {
+        font-size: 0.7rem;
+        color: var(--ink-soft);
+        margin-top: 4px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        text-align: center;
+      }
+
+      /* ── View toggle ─────────────────────────── */
+      .view-toggle {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 20px;
+        flex-wrap: wrap;
+      }
+
+      .view-btn {
+        padding: 7px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--white);
+        font-family: inherit;
+        font-size: 0.85rem;
+        color: var(--ink-mid);
+        cursor: pointer;
+        font-weight: 500;
+        transition: all 0.15s;
+      }
+
+      .view-btn.active {
+        background: var(--blue);
+        color: var(--white);
+        border-color: var(--blue);
+      }
+
+      .view-btn:hover:not(.active) {
+        background: var(--surface);
+        border-color: var(--ink-soft);
+      }
+
+      /* ── Cluster cards ───────────────────────── */
+      .cluster-cards-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(290px, 1fr));
+        gap: 16px;
+      }
+
+      .cluster-card {
+        border: 1px solid var(--border);
+        border-radius: var(--radius-md);
+        overflow: hidden;
+        background: var(--white);
+        box-shadow: var(--shadow-sm);
+        transition: box-shadow 0.2s, transform 0.2s;
+      }
+
+      .cluster-card:hover {
+        box-shadow: var(--shadow-md);
+        transform: translateY(-2px);
+      }
+
+      .cluster-card-head {
+        padding: 13px 16px 11px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .cluster-card-title-row {
+        display: flex;
+        align-items: center;
+        gap: 9px;
+        margin-bottom: 7px;
+      }
+
+      .cluster-id-pill {
+        color: var(--white);
+        font-size: 0.72rem;
+        font-weight: 700;
+        padding: 3px 11px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        flex-shrink: 0;
+      }
+
+      .cluster-size-lbl {
+        font-size: 0.8rem;
+        color: var(--ink-soft);
+      }
+
+      .rep-tag {
+        display: inline-block;
+        font-size: 0.77rem;
+        color: var(--ink-mid);
+        background: var(--white);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 2px 9px;
+      }
+
+      .cluster-card-body {
+        padding: 13px 16px;
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .member-chip {
+        font-size: 0.77rem;
+        padding: 3px 10px;
+        border: 1.5px solid var(--border);
+        border-radius: 99px;
+        color: var(--ink-mid);
+        background: var(--surface);
+      }
+
+      .member-chip.is-rep {
+        background: #fffbeb;
+        border-color: var(--orange);
+        color: var(--ink);
+        font-weight: 600;
+      }
+
+      /* ── Table view ──────────────────────────── */
+      .cluster-table-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .cluster-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--white);
+        font-size: 0.88rem;
+      }
+
+      .cluster-table thead {
+        background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+        color: var(--white);
+        position: sticky;
+        top: 0;
+      }
+
+      .cluster-table th {
+        padding: 13px 16px;
+        text-align: left;
+        font-weight: 600;
+        font-size: 0.88rem;
+      }
+
+      .cluster-table td {
+        padding: 11px 16px;
+        border-bottom: 1px solid var(--border);
+        color: var(--ink);
+      }
+
+      .cluster-table tbody tr:hover td { background: var(--blue-light); }
+      .cluster-table tbody tr:last-child td { border-bottom: none; }
+
+      .cluster-badge {
+        color: var(--white);
+        font-size: 0.7rem;
+        font-weight: 700;
+        padding: 3px 10px;
+        border-radius: 99px;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+      }
+
+      .role-rep  { color: var(--orange); font-weight: 700; }
+      .role-noise{ color: var(--ink-soft); }
+
+      /* ── Heatmap ─────────────────────────────── */
+      .heatmap-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        font-size: 0.85rem;
+        color: var(--ink-mid);
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+      }
+
+      .heatmap-controls select {
+        padding: 5px 9px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.85rem;
+        font-family: inherit;
+        background: var(--surface);
+        color: var(--ink);
+      }
+
+      .heatmap-wrap {
+        overflow: auto;
+        max-height: 580px;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--white);
+        padding: 8px;
+      }
+
+      .heatmap-legend {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 10px;
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+      }
+
+      .heatmap-gradient-bar {
+        flex: 1;
+        max-width: 200px;
+        height: 10px;
+        border-radius: 5px;
+        background: linear-gradient(to right,
+          rgb(220,53,69), rgb(253,126,20), rgb(40,167,69));
+      }
+
+      /* ── Dendrogram panel ─────────────────────── */
+      .dendrogram-panel {
+        background: #f8f5ff;
+        border: 1.5px solid #c4b5fd;
+        border-radius: var(--radius);
+        padding: 16px 20px;
+        margin-top: 20px;
+      }
+      .dendrogram-panel h4 {
+        margin: 0 0 12px;
+        font-size: 0.92rem;
+        font-weight: 700;
+        color: #5b21b6;
+      }
+      .dendro-note {
+        font-size: 0.82rem;
+        color: #6b7280;
+        margin: 0 0 12px;
+      }
+      .dendro-table-wrap { overflow-x: auto; }
+      .dendro-table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.83rem;
+      }
+      .dendro-table th {
+        background: #ede9fe;
+        color: #5b21b6;
+        padding: 7px 12px;
+        text-align: left;
+        font-weight: 600;
+      }
+      .dendro-table td {
+        padding: 5px 12px;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: middle;
+      }
+      .dendro-table tr:last-child td { border-bottom: none; }
+      .dendro-table tr.dendro-cut-row td { background: #fef3c7; font-weight: 600; }
+      .dendro-step { color: #6b7280; width: 48px; text-align: center; }
+      .dendro-sim  { width: 200px; }
+      .dendro-bar-wrap { display: flex; align-items: center; gap: 8px; }
+      .dendro-bar {
+        height: 10px;
+        background: linear-gradient(90deg, #7c3aed, #c4b5fd);
+        border-radius: 5px;
+        min-width: 2px;
+      }
+      .dendro-members {
+        max-width: 480px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        color: #374151;
+      }
+
+      .dendrogram-graph-panel {
+        background: #ffffff;
+        border-color: #dbeafe;
+      }
+      .dendro-svg-wrap {
+        overflow-x: auto;
+        overflow-y: hidden;
+        padding: 8px;
+        background: #f8fafc;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+      }
+      .dendro-svg {
+        min-width: 100%;
+        height: 420px;
+        display: block;
+      }
+      .dendro-branch {
+        stroke: #111827;
+        stroke-width: 2.2;
+        fill: none;
+        stroke-linecap: square;
+      }
+      .dendro-axis {
+        stroke: #94a3b8;
+        stroke-width: 1.4;
+      }
+      .dendro-grid {
+        stroke: #e5e7eb;
+        stroke-width: 1;
+      }
+      .dendro-cut-line {
+        stroke: var(--blue);
+        stroke-width: 2.5;
+        stroke-dasharray: 8 6;
+      }
+      .dendro-cut-label {
+        fill: var(--blue-dark);
+        font-size: 0.82rem;
+        font-weight: 700;
+      }
+      .dendro-leaf-dot {
+        fill: #111827;
+      }
+      .dendro-leaf-label,
+      .dendro-axis-label,
+      .dendro-dist-label,
+      .dendro-axis-title {
+        fill: #334155;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      .dendro-leaf-label { font-size: 0.78rem; }
+      .dendro-axis-label { font-size: 0.72rem; }
+      .dendro-dist-label {
+        font-size: 0.72rem;
+        font-weight: 700;
+      }
+      .dendro-axis-title {
+        font-size: 0.78rem;
+        font-weight: 700;
+      }
+
+      /* ── Noise chips (kept for layout compat) ── */
+      .noise-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .noise-chip {
+        background: #fef3c7;
+        border: 1px solid #fcd34d;
+        border-radius: var(--radius-sm);
+        padding: 3px 10px;
+        font-size: 0.78rem;
+        color: #78350f;
+      }
+
+      /* ── Saved panel ─────────────────────────── */
+      .saved-panel {
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--border);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .saved-panel-label {
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+      }
+
+      /* ── Top pairs table ─────────────────────── */
+      .pairs-table-wrap {
+        overflow-x: auto;
+        border-radius: var(--radius-md);
+        border: 1px solid var(--border);
+        box-shadow: var(--shadow-sm);
+        margin-top: 16px;
+      }
+
+      .pairs-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: var(--white);
+        font-size: 0.88rem;
+      }
+
+      .pairs-table thead {
+        background: linear-gradient(135deg, var(--blue-dark), var(--blue));
+        color: var(--white);
+      }
+
+      .pairs-table th {
+        padding: 12px 16px;
+        text-align: left;
+        font-weight: 600;
+      }
+
+      .pairs-table td {
+        padding: 10px 16px;
+        border-bottom: 1px solid var(--border);
+        color: var(--ink);
+      }
+
+      .pairs-table tbody tr:hover td { background: var(--blue-light); }
+      .pairs-table tbody tr:last-child td { border-bottom: none; }
+
+      .sim-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .sim-bar-track {
+        flex: 1;
+        height: 6px;
+        background: var(--border);
+        border-radius: 3px;
+        overflow: hidden;
+        min-width: 80px;
+      }
+
+      .sim-bar-fill {
+        height: 100%;
+        border-radius: 3px;
+        background: linear-gradient(90deg, var(--red), var(--orange), var(--green));
+      }
+
+      .sim-val {
+        font-weight: 600;
+        font-size: 0.85rem;
+        min-width: 42px;
+        text-align: right;
+        color: var(--green);
+      }
+
+      /* ── Btn overrides ───────────────────────── */
+      .btn-sm {
+        padding: 6px 14px !important;
+        font-size: 0.82rem !important;
+      }
+
+      .btn-outline-danger {
+        background: var(--white);
+        border: 1.5px solid #fca5a5;
+        color: var(--red);
+        padding: 8px 16px;
+        border-radius: var(--radius-sm);
+        font-family: inherit;
+        font-size: 0.9rem;
+        font-weight: 500;
+        cursor: pointer;
+        transition: background 0.15s;
+      }
+
+      .btn-outline-danger:hover { background: #fef2f2; }
+
+      /* ── Back link ───────────────────────────── */
+      .back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        color: var(--blue);
+        text-decoration: none;
+        font-weight: 500;
+        margin-bottom: 4px;
+        transition: color 0.15s;
+      }
+
+      .back-link:hover { color: var(--blue-dark); }
+
+      /* ── Loading overlay ─────────────────────── */
+      #global-loading {
+        position: fixed;
+        inset: 0;
+        background: rgba(255,255,255,0.7);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 9000;
+      }
+
+      #global-loading.visible {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      #global-loading p {
+        font-size: 0.95rem;
+        color: var(--ink-mid);
+        margin: 0;
+      }
+      /* ── Estimate banner ─────────────────────── */
+      .estimate-banner {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 16px;
+        background: var(--blue-light);
+        border: 1px solid #93c5fd;
+        border-radius: var(--radius-sm);
+        font-size: 0.87rem;
+        color: var(--blue-dark);
+        margin-bottom: 16px;
+      }
+
+      .estimate-banner.warn {
+        background: #fffbeb;
+        border-color: #fcd34d;
+        color: #92400e;
+      }
+
+      .estimate-banner.danger {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
+      }
+
+      /* ── Presets ─────────────────────────────── */
+      .preset-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        flex-wrap: wrap;
+        margin-bottom: 14px;
+      }
+
+      .preset-label {
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: var(--ink-soft);
+        flex-shrink: 0;
+      }
+
+      .preset-btn {
+        padding: 5px 13px;
+        border: 1.5px solid var(--border);
+        border-radius: 99px;
+        background: var(--white);
+        font-family: inherit;
+        font-size: 0.8rem;
+        font-weight: 500;
+        color: var(--ink-mid);
+        cursor: pointer;
+        transition: all 0.15s;
+      }
+
+      .preset-btn:hover {
+        background: var(--blue-light);
+        border-color: var(--blue);
+        color: var(--blue-dark);
+      }
+
+      .preset-btn-warning {
+        border-color: #fcd34d;
+        color: #92400e;
+      }
+
+      .preset-btn-warning:hover {
+        background: #fffbeb;
+        border-color: var(--orange);
+      }
+
+      .preset-btn-danger {
+        border-color: #fca5a5;
+        color: var(--red);
+      }
+
+      .preset-btn-danger:hover {
+        background: #fef2f2;
+      }
+
+      /* ── Country picker ──────────────────────── */
+      .picker-wrap {
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        margin-bottom: 16px;
+      }
+
+      .picker-search-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 10px 12px;
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+      }
+
+      .picker-search {
+        flex: 1;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        padding: 7px 11px;
+        font-size: 0.88rem;
+        font-family: inherit;
+        color: var(--ink);
+        background: var(--white);
+        transition: border-color 0.15s;
+      }
+
+      .picker-search:focus {
+        outline: none;
+        border-color: var(--blue);
+        box-shadow: 0 0 0 3px rgba(0,158,219,0.1);
+      }
+
+      .picker-count {
+        font-size: 0.8rem;
+        font-weight: 700;
+        color: var(--blue);
+        white-space: nowrap;
+        min-width: 70px;
+        text-align: right;
+      }
+
+      .picker-list {
+        max-height: 260px;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 0;
+        background: var(--white);
+      }
+
+      .picker-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 12px;
+        border-bottom: 1px solid var(--border);
+        border-right: 1px solid var(--border);
+        cursor: pointer;
+        transition: background 0.1s;
+        font-size: 0.84rem;
+        color: var(--ink);
+        user-select: none;
+      }
+
+      .picker-item:hover { background: var(--blue-light); }
+
+      .picker-item.checked { background: #eff6ff; }
+
+      .picker-item input[type="checkbox"] {
+        width: 15px;
+        height: 15px;
+        accent-color: var(--blue);
+        flex-shrink: 0;
+        cursor: pointer;
+      }
+
+      .picker-item.hidden { display: none; }
+
+      /* ── Action row ──────────────────────────── */
+      .matrix-actions-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      /* ── Scatter plot ────────────────────────── */
+      .scatter-toolbar {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-bottom: 12px;
+        padding: 10px 14px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+      }
+
+      .scatter-toolbar-label {
+        font-size: 0.83rem;
+        font-weight: 600;
+        color: var(--ink-mid);
+      }
+
+      .scatter-toolbar select {
+        padding: 5px 9px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        font-size: 0.83rem;
+        font-family: inherit;
+        background: var(--white);
+        color: var(--ink);
+      }
+
+      .scatter-wrap {
+        position: relative;
+        display: inline-block;
+        border: 1px solid var(--border);
+        border-radius: var(--radius-sm);
+        overflow: hidden;
+        background: #fff;
+        width: 100%;
+      }
+
+      #scatter-canvas {
+        display: block;
+        width: 100%;
+        height: auto;
+        cursor: crosshair;
+      }
+
+      .scatter-tooltip {
+        position: absolute;
+        background: rgba(15,23,42,0.88);
+        color: #fff;
+        font-size: 0.8rem;
+        padding: 5px 10px;
+        border-radius: 6px;
+        pointer-events: none;
+        white-space: nowrap;
+        display: none;
+        z-index: 10;
+        backdrop-filter: blur(4px);
+      }
+
+      .scatter-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        margin-top: 12px;
+      }
+
+      .scatter-legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.82rem;
+        color: var(--ink-mid);
+      }
+
+      .scatter-legend-dot {
+        width: 12px;
+        height: 12px;
+        border-radius: 50%;
+        flex-shrink: 0;
+      }
+
+      .scatter-note {
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+        margin-top: 10px;
+        font-style: italic;
+      }
+      /* ── Saved cards (matrix list / result list) ─────── */
+      .saved-card {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 14px 16px;
+        border: 1.5px solid var(--border);
+        border-radius: var(--radius-sm);
+        background: var(--white);
+        margin-bottom: 8px;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      .saved-card:hover { border-color: var(--blue); box-shadow: var(--shadow-sm); }
+
+      .saved-card-active {
+        border-color: var(--blue);
+        background: var(--blue-light);
+      }
+
+      .saved-card-main { flex: 1; min-width: 0; }
+
+      .saved-card-title {
+        font-size: 0.92rem;
+        font-weight: 600;
+        color: var(--ink);
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .saved-card-meta {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-bottom: 5px;
+      }
+
+      .saved-badge {
+        font-size: 0.72rem;
+        padding: 2px 8px;
+        border-radius: 99px;
+        background: var(--surface);
+        border: 1px solid var(--border);
+        color: var(--ink-mid);
+        white-space: nowrap;
+      }
+
+      .saved-date {
+        font-size: 0.72rem;
+        color: var(--ink-soft);
+        align-self: center;
+      }
+
+      .saved-card-countries {
+        font-size: 0.78rem;
+        color: var(--ink-soft);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .saved-card-actions {
+        display: flex;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .saved-empty {
+        font-size: 0.87rem;
+        color: var(--ink-soft);
+        padding: 12px 0;
+        font-style: italic;
+      }
+    </style>
+  </head>
+
+  <body>
+    <!-- ═══════════════ NAVBAR ═══════════════ -->
+    <nav class="navbar">
+      <div class="nav-inner">
+        <div class="nav-brand">
+          <span class="nav-logo">🌍</span>
+          <span class="nav-title">ClusterNations</span>
+        </div>
+        <div class="nav-links">
+          <button class="nav-btn active" onclick="openTab('matrix', this)">
+            Similarity Matrix
+          </button>
+          <button class="nav-btn" onclick="openTab('cluster', this)">
+            Run Clustering
+          </button>
+          <button class="nav-btn" onclick="openTab('results', this)">
+            Results
+          </button>
+          <button class="nav-btn" onclick="openTab('explore', this)">
+            Explore
+          </button>
+          <a href="index.html" class="nav-btn" style="text-decoration:none">
+            🔗 Compare
+          </a>
+        </div>
+        <div class="nav-badge">COE 543/743 · LAU · Project 2</div>
+      </div>
+    </nav>
+
+    <!-- ═══════════════ HERO ═══════════════ -->
+    <section class="hero visible" id="hero-section">
+      <div class="hero-bg-pattern"></div>
+      <div class="hero-split">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Wikipedia Semi-Structured Data · Project 2</div>
+          <h1 class="hero-title">Country<br /><em>Clustering Tool</em></h1>
+          <p class="hero-desc">
+            Group similar countries using K-Means and Agglomerative Hierarchical
+            Clustering on Tree Edit Distance similarity scores computed from Wikipedia infoboxes.
+          </p>
+          <div class="hero-actions">
+            <button class="btn btn-hero-primary"
+                    onclick="openTab('matrix', document.querySelectorAll('.nav-btn')[0])">
+              Build Similarity Matrix →
+            </button>
+            <a href="index.html" class="btn-hero-primary"
+               style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.4);text-decoration:none;padding:13px 24px;border-radius:12px;font-size:0.95rem;font-weight:600;">
+              ← Project 1
+            </a>
+          </div>
+        </div>
+        <div class="hero-image-wrap">
+          <img src="World.jpg" alt="World Map" class="hero-world-img" />
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ STATS STRIP ═══════════════ -->
+    <section class="stats-strip visible" id="stats-strip">
+      <div class="stats-inner">
+        <div class="stat-item">
+          <span class="stat-num" id="stat-countries">—</span>
+          <span class="stat-lbl">Countries in DB</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-matrix">—</span>
+          <span class="stat-lbl">Matrix Size</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="stat-clusters">—</span>
+          <span class="stat-lbl">Last Cluster Count</span>
+        </div>
+      </div>
+    </section>
+
+    <!-- ═══════════════ MAIN ═══════════════ -->
+    <main class="main-content">
+
+      <!-- ─── TAB: Similarity Matrix ─────────────────── -->
+      <div id="tab-matrix" class="tab-content active">
+        <div class="page-header">
+          <h2>Similarity Matrix</h2>
+          <p>Build and manage pairwise TED similarity scores. Select a matrix in the Run Clustering tab.</p>
+        </div>
+
+        <!-- Build status -->
+        <div class="cluster-section">
+          <div class="cluster-section-header">
+            <span class="step-badge">Build</span>
+            <h3>Build a New Matrix</h3>
+          </div>
+
+          <div id="matrix-status-bar" class="matrix-status-bar matrix-status-unknown">
+            <span class="status-icon">⏳</span>
+            <span class="status-text">No active build.</span>
+            <button class="btn btn-secondary btn-sm" onclick="refreshBuildStatus()">↺ Refresh</button>
+          </div>
+
+          <div class="build-progress" id="build-progress">
+            <div class="build-progress-info">
+              <span id="build-progress-text">0 / 0 pairs</span>
+              <span class="build-progress-pair" id="build-progress-pair"></span>
+            </div>
+            <div class="progress-bar">
+              <div id="build-progress-fill" class="progress-fill" style="width:0%"></div>
+            </div>
+          </div>
+
+          <!-- Name input -->
+          <div class="param-item" style="max-width:380px;margin-bottom:16px">
+            <label for="matrix-name-input">Label for this matrix (optional)</label>
+            <input type="text" id="matrix-name-input" placeholder="e.g. Middle East 2026"
+                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem" />
+          </div>
+
+          <!-- Presets + picker -->
+          <div class="estimate-banner" id="estimate-banner">
+            <span id="estimate-icon">📊</span>
+            <span id="estimate-text">Select countries below to see time estimate.</span>
+          </div>
+
+          <div class="preset-row">
+            <span class="preset-label">Quick select:</span>
+            <button class="preset-btn" onclick="applyPreset('middle-east')">Middle East</button>
+            <button class="preset-btn" onclick="applyPreset('europe')">Europe</button>
+            <button class="preset-btn" onclick="applyPreset('asia')">Asia</button>
+            <button class="preset-btn" onclick="applyPreset('americas')">Americas</button>
+            <button class="preset-btn" onclick="applyPreset('africa')">Africa</button>
+            <button class="preset-btn preset-btn-warning" onclick="applyPreset('all')">All (slow ⚠️)</button>
+            <button class="preset-btn preset-btn-danger" onclick="applyPreset('none')">Clear</button>
+          </div>
+
+          <div class="picker-wrap">
+            <div class="picker-search-row">
+              <input type="text" id="country-search" placeholder="🔍  Search countries…"
+                     oninput="filterPickerList()" class="picker-search" />
+              <span class="picker-count" id="picker-count">0 selected</span>
+            </div>
+            <div class="picker-list" id="picker-list"></div>
+          </div>
+
+          <div class="matrix-actions-row">
+            <button class="btn btn-primary" onclick="buildMatrix(false)">⚡ Build New Matrix</button>
+            <button class="btn btn-secondary" onclick="buildMatrixIncremental()">＋ Extend Selected Matrix</button>
+          </div>
+        </div>
+
+        <!-- Top similar pairs -->
+        <div class="cluster-section" id="top-pairs-section" style="display:none">
+          <div class="cluster-section-header">
+            <span class="step-badge">Preview</span>
+            <h3>Most Similar Country Pairs</h3>
+            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
+              <label style="font-size:0.83rem;color:var(--ink-soft)">Show top</label>
+              <select id="top-pairs-limit" onchange="loadTopPairs()"
+                      style="padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.83rem;background:var(--surface)">
+                <option value="10">10</option>
+                <option value="20">20</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+          <div id="top-pairs-container"></div>
+        </div>
+      </div>
+
+      <!-- ─── TAB: Run Clustering ────────────────────── -->
+      <div id="tab-cluster" class="tab-content">
+        <div class="page-header">
+          <h2>Run Clustering</h2>
+          <p>Select a similarity matrix, choose an algorithm, tune parameters, and cluster.</p>
+        </div>
+
+        <!-- Saved matrices list — select which one to cluster on -->
+        <div class="cluster-section">
+          <div class="cluster-section-header">
+            <span class="step-badge">Step 1</span>
+            <h3>Select a Similarity Matrix</h3>
+            <button class="btn btn-secondary btn-sm" style="margin-left:auto"
+                    onclick="loadMatrixList()">↺ Refresh</button>
+          </div>
+          <div id="matrix-list-container">
+            <p class="saved-empty">Loading…</p>
+          </div>
+        </div>
+
+        <!-- Algorithm & params -->
+        <div class="cluster-section">
+          <div class="cluster-section-header">
+            <span class="step-badge">Step 2</span>
+            <h3>Select Algorithm &amp; Parameters</h3>
+          </div>
+
+          <div class="algo-tabs">
+            <button class="algo-tab-btn active" id="tab-btn-kmeans"
+                    onclick="switchAlgo('kmeans')">K-Means</button>
+            <button class="algo-tab-btn" id="tab-btn-agglomerative"
+                    onclick="switchAlgo('agglomerative')">Agglomerative Hierarchical Clustering</button>
+          </div>
+
+          <!-- K-Means -->
+          <div id="params-kmeans">
+            <div class="param-grid">
+              <div class="param-item">
+                <label for="km-k">Clusters (k)</label>
+                <input type="number" id="km-k" value="3" min="2" max="50" />
+                <span class="field-hint">How many groups to form</span>
+              </div>
+              <div class="param-item">
+                <label for="km-max-iter">Max iterations</label>
+                <input type="number" id="km-max-iter" value="100" min="10" max="1000" />
+              </div>
+              <div class="param-item">
+                <label for="km-n-init">Random restarts</label>
+                <input type="number" id="km-n-init" value="10" min="1" max="50" />
+                <span class="field-hint">More = more stable result</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="params-agglomerative" style="display:none">
+            <div class="algo-description">
+              <strong>Agglomerative Hierarchical Clustering</strong> starts with each country as its own cluster and repeatedly merges the closest clusters using the selected linkage rule.
+            </div>
+            <div class="param-grid">
+              <div class="param-item">
+                <label for="agg-n-clusters">Clusters</label>
+                <input type="number" id="agg-n-clusters" value="3" min="2" max="50" />
+                <span class="field-hint">Cut the hierarchy at this number of groups</span>
+              </div>
+              <div class="param-item">
+                <label for="agg-linkage">Linkage</label>
+                <select id="agg-linkage">
+                  <option value="average" selected>Average linkage</option>
+                  <option value="single">Single linkage</option>
+                  <option value="complete">Complete linkage</option>
+                </select>
+                <span class="field-hint">How distance between two clusters is computed</span>
+              </div>
+            </div>
+          </div>
+
+          <button class="btn btn-primary btn-run" id="run-btn" onclick="runClustering()">
+            ▶ Run Clustering
+          </button>
+
+          <!-- Result label -->
+          <div class="param-item" style="max-width:380px;margin-top:12px">
+            <label for="result-name-input">Label for this result (optional)</label>
+            <input type="text" id="result-name-input" placeholder="e.g. K-Means k=3 Middle East"
+                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem" />
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── TAB: Results ───────────────────────────── -->
+      <div id="tab-results" class="tab-content">
+        <div class="page-header">
+          <h2>Cluster Results</h2>
+          <p>View and compare clustering outputs from K-Means and Agglomerative Hierarchical Clustering.</p>
+        </div>
+
+        <div class="cluster-section" id="results-main" style="display:none">
+          <div class="cluster-section-header">
+            <span class="step-badge" id="results-algo-badge">Results</span>
+            <h3 id="results-title">Cluster Output</h3>
+            <div class="results-meta" id="results-meta"></div>
+          </div>
+
+          <!-- Metrics -->
+          <div class="metrics-strip" id="metrics-strip"></div>
+
+          <!-- View toggle -->
+          <div class="view-toggle">
+            <button class="view-btn active" id="vbtn-cards"   onclick="switchView('cards')">🗂 Cards</button>
+            <button class="view-btn" id="vbtn-table"          onclick="switchView('table')">📋 Table</button>
+            <button class="view-btn" id="vbtn-heatmap"        onclick="switchView('heatmap')">🌡 Heatmap</button>
+            <button class="view-btn" id="vbtn-scatter"        onclick="switchView('scatter')">🔵 Scatter Plot</button>
+            <button class="view-btn" id="vbtn-dendrogram"    onclick="switchView('dendrogram')">🌳 Dendrogram</button>
+            <button class="view-btn" id="vbtn-history"       onclick="switchView('history')">📜 Merge History</button>
+          </div>
+
+          <!-- Cards -->
+          <div id="view-cards" class="result-view">
+            <div id="cards-container" class="cluster-cards-grid"></div>
+          </div>
+
+          <!-- Table -->
+          <div id="view-table" class="result-view" style="display:none">
+            <div class="cluster-table-wrap">
+              <table class="cluster-table">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>Country</th>
+                    <th>Cluster</th>
+                    <th>Role</th>
+                  </tr>
+                </thead>
+                <tbody id="table-body"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Heatmap -->
+          <div id="view-heatmap" class="result-view" style="display:none">
+            <div class="heatmap-controls">
+              <label>Show:</label>
+              <select id="heatmap-limit" onchange="renderHeatmap()">
+                <option value="20">First 20</option>
+                <option value="30">First 30</option>
+                <option value="50">First 50</option>
+                <option value="0">All</option>
+              </select>
+              <label style="margin-left:10px">Sort:</label>
+              <select id="heatmap-sort" onchange="renderHeatmap()">
+                <option value="cluster">By cluster</option>
+                <option value="alpha">Alphabetical</option>
+              </select>
+            </div>
+            <div class="heatmap-wrap" id="heatmap-wrap"></div>
+            <div class="heatmap-legend">
+              <span>Low</span>
+              <div class="heatmap-gradient-bar"></div>
+              <span>High</span>
+              <span style="margin-left:8px;font-weight:600">Similarity</span>
+            </div>
+          </div>
+
+          <!-- Dendrogram graph -->
+          <div id="view-dendrogram" class="result-view" style="display:none">
+            <div id="dendrogram-body"></div>
+          </div>
+
+          <!-- Merge history table -->
+          <div id="view-history" class="result-view" style="display:none">
+            <div id="history-body"></div>
+          </div>
+
+          <!-- Scatter Plot (MDS projection) -->
+          <div id="view-scatter" class="result-view" style="display:none">
+            <div class="scatter-toolbar">
+              <label class="scatter-toolbar-label">Labels:</label>
+              <select id="scatter-labels" onchange="renderScatter()">
+                <option value="hover">On hover only</option>
+                <option value="always">Always show</option>
+                <option value="reps">Medoids only</option>
+              </select>
+              <label class="scatter-toolbar-label" style="margin-left:16px">Dot size:</label>
+              <input type="range" id="scatter-dot-size" min="4" max="18" value="9"
+                     oninput="renderScatter()" style="width:80px;accent-color:var(--blue)" />
+              <button class="btn btn-secondary btn-sm" style="margin-left:auto"
+                      onclick="downloadScatter()">⬇ Download PNG</button>
+            </div>
+            <div class="scatter-wrap">
+              <canvas id="scatter-canvas"></canvas>
+              <div id="scatter-tooltip" class="scatter-tooltip"></div>
+            </div>
+            <div class="scatter-legend" id="scatter-legend"></div>
+            <p class="scatter-note">
+              2D projection via Classical MDS on the TED distance matrix.
+              <strong>+</strong> marks the cluster medoid (most central country).
+            </p>
+          </div>
+
+          <!-- Load saved (now via the Run Clustering tab list) -->
+          <div class="saved-panel">
+            <span class="saved-panel-label">Load a different result:</span>
+            <button class="btn btn-sm btn-secondary"
+                    onclick="openTab('cluster', document.querySelectorAll('.nav-btn')[1])">
+              ← Go to Saved Results
+            </button>
+          </div>
+        </div>
+
+        <!-- Saved results list — always visible in Results tab -->
+        <div class="cluster-section">
+          <div class="cluster-section-header">
+            <span class="step-badge">Saved</span>
+            <h3>Your Cluster Results</h3>
+            <button class="btn btn-secondary btn-sm" style="margin-left:auto"
+                    onclick="loadResultsList()">↺ Refresh</button>
+          </div>
+          <div id="results-list-container">
+            <p class="saved-empty">Loading…</p>
+          </div>
+        </div>
+
+        <!-- Placeholder when no result is currently displayed -->
+        <div class="cluster-section" id="results-placeholder">
+          <div style="text-align:center;padding:40px 20px;color:var(--ink-soft)">
+            <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
+            <p style="font-size:1rem">Select a result above, or run a new algorithm.</p>
+            <button class="btn btn-primary" style="margin-top:16px"
+                    onclick="openTab('cluster', document.querySelectorAll('.nav-btn')[1])">
+              Go to Run Clustering →
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ─── TAB: Explore ───────────────────────────── -->
+      <div id="tab-explore" class="tab-content">
+        <div class="page-header">
+          <h2>Explore Similarity</h2>
+          <p>Look up the most similar countries to any specific country in the database.</p>
+        </div>
+
+        <div class="cluster-section">
+          <div class="cluster-section-header">
+            <span class="step-badge">Lookup</span>
+            <h3>Country Neighbours</h3>
+          </div>
+          <div class="compare-form">
+            <div class="form-group" style="flex:1;min-width:200px">
+              <label>Select country</label>
+              <select id="explore-country-select">
+                <option value="">-- Select Country --</option>
+              </select>
+            </div>
+            <div class="form-group" style="flex:0;min-width:140px">
+              <label>Top N</label>
+              <input type="number" id="explore-top-n" value="5" min="1" max="50"
+                     style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit" />
+            </div>
+            <div style="padding-bottom:20px">
+              <button class="btn btn-primary" onclick="lookupNeighbours()">Find Neighbours</button>
+            </div>
+          </div>
+          <div id="neighbours-result" style="display:none">
+            <div id="neighbours-container"></div>
+          </div>
+        </div>
+
+        <div class="cluster-section" id="top-pairs-explore-section" style="display:none">
+          <div class="cluster-section-header">
+            <span class="step-badge">Global</span>
+            <h3>Top Similar Pairs</h3>
+          </div>
+          <div id="top-pairs-explore-container"></div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ═══════════════ FOOTER ═══════════════ -->
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="footer-logo">🌍</span>
+          <span class="footer-name">ClusterNations</span>
+        </div>
+        <div class="footer-links">
+          <a href="index.html">← Back to Project 1</a>
+          <span class="footer-sep">·</span>
+          <a href="https://en.wikipedia.org/wiki/Member_states_of_the_United_Nations" target="_blank">UN Member States</a>
+        </div>
+        <div class="footer-copy">
+          © 2026 ClusterNations · COE 543/743 IDPA · Lebanese American University<br/>
+          <span class="footer-sub">Project #2 — Wikipedia Semi-Structured Infobox Document Clustering Tool</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- Global loading overlay -->
+    <div id="global-loading">
+      <div class="spinner"></div>
+      <p id="loading-msg">Loading…</p>
+    </div>
+
+    <script src="cluster.js"></script>
+  </body>
+</html>

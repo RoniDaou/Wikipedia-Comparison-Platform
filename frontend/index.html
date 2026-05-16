@@ -1,0 +1,388 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>CompareNations — Country Infobox Analysis</title>
+    <link rel="stylesheet" href="style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="nav-inner">
+        <div class="nav-brand">
+          <span class="nav-logo">🌍</span>
+          <span class="nav-title">CompareNations</span>
+        </div>
+        <div class="nav-links">
+          <button class="nav-btn active" onclick="openTab('scrape', this)">
+            Data Collection
+          </button>
+          <button class="nav-btn" onclick="openTab('compare', this)">
+            Comparison
+          </button>
+          <button class="nav-btn" onclick="openTab('compare-all', this)">
+            1 vs All
+          </button>
+          <button class="nav-btn" onclick="openTab('browse', this)">
+            Browse Data
+          </button>
+          <a href="cluster.html" class="nav-btn" style="text-decoration:none">
+            🔗 Clustering
+          </a>
+        </div>
+        <div class="nav-badge">COE 543/743 · LAU</div>
+      </div>
+    </nav>
+
+    <section class="hero" id="hero-section">
+      <div class="hero-bg-pattern"></div>
+      <div class="hero-split">
+        <div class="hero-inner">
+          <div class="hero-eyebrow">Wikipedia Semi-Structured Data</div>
+          <h1 class="hero-title">Compare Any<br /><em>Two Countries</em></h1>
+          <p class="hero-desc">
+            Extract, parse, and compare Wikipedia country infoboxes using Tree
+            Edit Distance — measuring structural and content similarity across
+            all 193 UN-recognized nations.
+          </p>
+          <div class="hero-actions">
+            <button
+              class="btn btn-hero-primary"
+              onclick="
+                openTab('compare', document.querySelectorAll('.nav-btn')[1])
+              "
+            >
+              Start Comparing →
+            </button>
+          </div>
+        </div>
+        <div class="hero-image-wrap">
+          <img src="World.jpg" alt="World Map" class="hero-world-img" />
+        </div>
+      </div>
+    </section>
+
+    <section class="stats-strip" id="stats-strip">
+      <div class="stats-inner">
+        <div class="stat-item">
+          <span class="stat-num" id="total-countries">0</span>
+          <span class="stat-lbl">Countries in Database</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="total-comparisons">0</span>
+          <span class="stat-lbl">Comparisons Made</span>
+        </div>
+        <div class="stat-divider"></div>
+        <div class="stat-item">
+          <span class="stat-num" id="last-updated">—</span>
+          <span class="stat-lbl">Last Updated</span>
+        </div>
+      </div>
+    </section>
+
+    <main class="main-content">
+      <div id="scrape" class="tab-content active">
+        <div class="page-header">
+          <h2>Data Collection</h2>
+          <p>Scrape Wikipedia infoboxes for UN-recognized countries</p>
+        </div>
+        <div class="action-section">
+          <h3>Single Country Scrape</h3>
+          <div class="form-group">
+            <input
+              type="text"
+              id="single-country"
+              placeholder="Enter country name (e.g., France)"
+            />
+            <button onclick="scrapeSingleCountry()" class="btn btn-primary">
+              Scrape Country
+            </button>
+          </div>
+        </div>
+        <div class="action-section">
+          <h3>Bulk Scrape</h3>
+          <p>Scrape all UN-recognized countries (193 countries)</p>
+          <button onclick="scrapeAllCountries()" class="btn btn-warning">
+            Scrape All UN Countries
+          </button>
+          <div class="note">
+            ⚠️ This may take several minutes. Please be patient.
+          </div>
+        </div>
+        <div
+          id="scrape-result"
+          class="result-panel"
+          style="display: none"
+        ></div>
+      </div>
+
+      <div id="compare" class="tab-content">
+        <div class="page-header">
+          <h2>Country Comparison</h2>
+          <p>
+            Select two countries to compare their Wikipedia infobox structures
+          </p>
+        </div>
+        <div class="compare-form">
+          <div class="form-group">
+            <label>Select First Country:</label>
+            <select id="country1-select">
+              <option value="">-- Select Country --</option>
+            </select>
+          </div>
+          <div class="compare-vs">VS</div>
+          <div class="form-group">
+            <label>Select Second Country:</label>
+            <select id="country2-select">
+              <option value="">-- Select Country --</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="compareCountries()" class="btn btn-primary">
+          Compare Countries
+        </button>
+        <button onclick="compareAllCountries()" class="btn btn-secondary">
+          1 vs All
+        </button>
+        <div
+          id="comparison-result"
+          class="result-panel"
+          style="display: none"
+        ></div>
+      </div>
+
+      <div id="compare-all" class="tab-content">
+        <div class="page-header">
+          <h2>1 vs All Comparison</h2>
+          <p>
+            Select a country to compare against all other countries in the database
+          </p>
+        </div>
+        <div class="compare-all-form">
+          <div class="form-group">
+            <label>Select Country to Compare:</label>
+            <select id="base-country-select">
+              <option value="">-- Select Country --</option>
+            </select>
+          </div>
+        </div>
+        <button onclick="startCompareAll()" class="btn btn-primary">
+          Compare Against All
+        </button>
+        
+        <div id="compare-all-results" class="result-panel" style="display: none">
+          <div class="compare-all-header">
+            <h3 id="compare-all-title">Results</h3>
+            <div class="compare-all-controls">
+              <label>Show: </label>
+              <select id="results-limit-select" onchange="filterCompareAllResults()">
+                <option value="10">First 10</option>
+                <option value="25">First 25</option>
+                <option value="50">First 50</option>
+                <option value="100">First 100</option>
+                <option value="all">All Results</option>
+              </select>
+            </div>
+          </div>
+          <div id="compare-all-loading" class="loading-spinner" style="display: none">
+            <div class="spinner"></div>
+            <p>Comparing country against all others...</p>
+          </div>
+          <div id="compare-all-table-container"></div>
+        </div>
+      </div>
+
+      <div id="browse" class="tab-content">
+        <div class="page-header">
+          <h2>Browse Collected Data</h2>
+          <p>Explore all scraped country infoboxes</p>
+        </div>
+        <div class="form-group">
+          <input
+            type="text"
+            id="search-country"
+            placeholder="Search for a country..."
+          />
+          <button onclick="searchCountry()" class="btn btn-primary">
+            Search
+          </button>
+        </div>
+        <div id="country-list" class="country-list"></div>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-brand">
+          <span class="footer-logo">🌍</span>
+          <span class="footer-name">CompareNations</span>
+        </div>
+        <div class="footer-links">
+          <a href="#" onclick="return false;">Terms of Use</a>
+          <span class="footer-sep">·</span>
+          <a href="#" onclick="return false;">Privacy</a>
+          <span class="footer-sep">·</span>
+          <a
+            href="https://en.wikipedia.org/wiki/Member_states_of_the_United_Nations"
+            target="_blank"
+            >UN Member States</a
+          >
+        </div>
+        <div class="footer-copy">
+          © 2026 CompareNations · COE 543/743 IDPA · Lebanese American
+          University<br />
+          <span class="footer-sub"
+            >Project #1 — Wikipedia Semi-Structured Infobox Data Collection,
+            Comparison &amp; Differencing</span
+          >
+        </div>
+      </div>
+    </footer>
+
+    <div id="scraping-panel" class="scraping-panel hidden">
+      <button
+        id="panel-toggle-btn"
+        class="panel-toggle-btn"
+        onclick="togglePanelMinimize()"
+        title="Minimize panel"
+      >
+        ◀
+      </button>
+      <div class="panel-header"><h3>🔄 Scraping Progress</h3></div>
+      <div class="panel-content">
+        <div class="progress-info">
+          <p><strong>Progress:</strong> <span id="progress-text">0/0</span></p>
+          <div class="progress-bar">
+            <div id="progress-fill" class="progress-fill"></div>
+          </div>
+        </div>
+        <div id="country-progress-list" class="country-progress-list"></div>
+      </div>
+      <div class="panel-controls">
+        <button
+          id="pause-resume-btn"
+          class="btn btn-secondary"
+          onclick="togglePauseResume()"
+        >
+          ⏸️ Pause
+        </button>
+        <button id="stop-btn" class="btn btn-danger" onclick="stopScraping()">
+          ⏹️ Stop
+        </button>
+      </div>
+    </div>
+
+    <div id="country-modal" class="modal">
+      <div class="modal-content">
+        <span class="modal-close" onclick="closeCountryModal()">&times;</span>
+        <div id="modal-country-content"></div>
+      </div>
+    </div>
+
+    <div id="confirm-modal" class="modal">
+      <div class="confirm-modal-content">
+        <div class="confirm-modal-header">
+          <h3>⚠️ Country Already Exists</h3>
+        </div>
+        <div class="confirm-modal-body"><p id="confirm-message"></p></div>
+        <div class="confirm-modal-footer">
+          <button class="btn btn-secondary" onclick="closeConfirmModal(false)">
+            Cancel
+          </button>
+          <button class="btn btn-primary" onclick="closeConfirmModal(true)">
+            OK - Update Data
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <div id="bulk-scrape-modal" class="modal">
+      <div class="bulk-modal-content">
+        <div class="bulk-modal-header"><h3>🌍 Bulk Scrape Options</h3></div>
+        <div class="bulk-modal-body">
+          <p class="bulk-modal-description">
+            You are about to scrape all
+            <strong>193 UN-recognized countries</strong>.<br /><br />Some
+            countries may already exist in the database. How would you like to
+            proceed?
+          </p>
+          <div class="bulk-options">
+            <div class="bulk-option" onclick="closeBulkModal('rescrape-all')">
+              <div class="option-icon">♻️</div>
+              <div class="option-content">
+                <h4>Re-scrape All</h4>
+                <p>Update all countries with fresh data from Wikipedia</p>
+              </div>
+            </div>
+            <div class="bulk-option" onclick="closeBulkModal('new-only')">
+              <div class="option-icon">✅</div>
+              <div class="option-content">
+                <h4>Scrape New Countries Only</h4>
+                <p>Skip countries already in the database</p>
+              </div>
+            </div>
+            <div class="bulk-option cancel" onclick="closeBulkModal('cancel')">
+              <div class="option-icon">❌</div>
+              <div class="option-content">
+                <h4>Cancel</h4>
+                <p>Don't scrape anything right now</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="loading" class="loading" style="display: none">
+      <div class="spinner"></div>
+      <p>Loading...</p>
+    </div>
+
+    <div id="tree-image-modal" class="tree-image-modal" style="display: none">
+      <div class="tree-image-modal-content">
+        <button class="tree-image-close" onclick="closeTreeImageModal()">
+          ✕
+        </button>
+
+        <div class="tree-image-topbar">
+          <h3 id="tree-image-title">Tree Preview</h3>
+
+          <div class="tree-image-zoom-controls">
+            <button type="button" onclick="zoomTreeImage(0.8)">−</button>
+            <button type="button" onclick="resetTreeImageZoom()">100%</button>
+            <button type="button" onclick="zoomTreeImage(1.25)">+</button>
+          </div>
+        </div>
+
+        <div class="tree-image-frame" id="tree-image-frame">
+          <img id="tree-image-view" alt="Full tree diagram" />
+        </div>
+      </div>
+    </div>
+
+    <!-- TREE EDITING MODAL -->
+    <div id="tree-edit-modal" class="tree-edit-modal">
+      <div class="tree-edit-modal-content">
+        <div class="tree-edit-header">
+          <div>
+            <h3 id="tree-edit-title">Edit Tree</h3>
+            <p id="tree-edit-original" style="margin: 4px 0 0; font-size: 0.9rem; color: #718096;"></p>
+          </div>
+          <div class="tree-edit-controls">
+            <button type="button" class="btn btn-primary btn-sm" onclick="saveEditedTree()">💾 Save Edit</button>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="closeTreeEditModal()">✕ Close</button>
+          </div>
+        </div>
+        <div class="tree-edit-toolbar">
+          <span class="toolbar-info">Click on nodes to select and edit • Right-click for options</span>
+        </div>
+        <!-- CHANGE THIS LINE - ADD id="tree-edit-container" -->
+        <div id="tree-edit-container" class="tree-edit-container"></div>
+        <div id="tree-edit-panel" class="tree-edit-footer"></div>
+      </div>
+    </div>
+
+    <script src="app.js"></script>
+  </body>
+</html>
