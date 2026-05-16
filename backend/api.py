@@ -110,19 +110,6 @@ def get_countries():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
-
-@app.route('/api/country/<country_name>', methods=['GET'])
-def get_country(country_name):
-    try:
-        country_data = db.get_country(country_name)
-        if country_data:
-            country_data.pop('_id', None)
-            return jsonify({'success': True, 'data': country_data})
-        else:
-            return jsonify({'success': False, 'error': 'Country not found'}), 404
-    except Exception as e:
-        return jsonify({'success': False, 'error': str(e)}), 500
-
 # ─────────────────────────────────────────────
 #  Step 1 — Scraping
 # ─────────────────────────────────────────────
@@ -1125,7 +1112,7 @@ def run_clustering():
             "matrix_id":  "<_id>",                         // required
             "name":       "My run label",                   // optional
 
-            // K-Means params
+            // K-Medoids params
             "k":         3,
             "max_iter":  100,
             "n_init":    10,
@@ -1165,7 +1152,17 @@ def run_clustering():
             if k > matrix_doc['count']:
                 return jsonify({'success': False,
                                 'error': f'k={k} > available countries ({matrix_doc["count"]})'}), 400
+            if max_iter < 1:
+                return jsonify({
+                    'success': False,
+                    'error': 'max_iter must be >= 1'
+                }), 400
 
+            if n_init < 1:
+                return jsonify({
+                    'success': False,
+                    'error': 'n_init must be >= 1'
+                }), 400
             result = clustering_pipeline.run_kmeans(
                 matrix_doc, k=k, max_iter=max_iter, n_init=n_init, name=name)
         else:

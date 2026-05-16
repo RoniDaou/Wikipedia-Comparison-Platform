@@ -457,6 +457,7 @@ class KMeansClustering:
                 'id':             c,
                 'centroid':       centroid_coords,
                 'representative': rep,
+                'medoid': rep,
                 'members':        members,
                 'size':           len(members)
             }

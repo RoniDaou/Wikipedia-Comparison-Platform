@@ -18,24 +18,24 @@
      GET    /api/statistics                         — DB stats
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const API = 'http://localhost:5000';
+const API = "http://localhost:5000";
 
 /* ── App state ───────────────────────────────────────────────────────────── */
 const State = {
-  currentAlgo:    'kmeans',
-  lastResult:     null,
-  activeMatrixId: null,   // _id of currently selected matrix
-  pollTimer:      null,
-  fullMatrix:     null,   // full matrix doc (for scatter/heatmap)
+  currentAlgo: "kmeans",
+  lastResult: null,
+  activeMatrixId: null, // _id of currently selected matrix
+  pollTimer: null,
+  fullMatrix: null, // full matrix doc (for scatter/heatmap)
 };
 
 /* ══════════════════════════════════════════════════════════════════════════
    BOOT
 ══════════════════════════════════════════════════════════════════════════ */
 
-window.addEventListener('DOMContentLoaded', () => {
+window.addEventListener("DOMContentLoaded", () => {
   loadCountrySelects();
-  loadMatrixList(true);   /* true = auto-select the most recent matrix */
+  loadMatrixList(true); /* true = auto-select the most recent matrix */
   loadResultsList();
   loadStats();
   refreshBuildStatus();
@@ -47,24 +47,33 @@ window.addEventListener('DOMContentLoaded', () => {
 
 function openTab(name, btn) {
   /* hide hero/stats on all tabs except the first load */
-  document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active'));
-  document.querySelectorAll('.nav-btn').forEach(el => el.classList.remove('active'));
+  document
+    .querySelectorAll(".tab-content")
+    .forEach((el) => el.classList.remove("active"));
+  document
+    .querySelectorAll(".nav-btn")
+    .forEach((el) => el.classList.remove("active"));
 
   const tab = document.getElementById(`tab-${name}`);
-  if (tab) tab.classList.add('active');
-  if (btn) btn.classList.add('active');
+  if (tab) tab.classList.add("active");
+  if (btn) btn.classList.add("active");
 
   /* hide hero after first nav click */
-  const hero  = document.getElementById('hero-section');
-  const strip = document.getElementById('stats-strip');
-  if (name !== 'matrix') {
-    hero.classList.remove('visible');
-    strip.classList.remove('visible');
+  const hero = document.getElementById("hero-section");
+  const strip = document.getElementById("stats-strip");
+  if (name !== "matrix") {
+    hero.classList.remove("visible");
+    strip.classList.remove("visible");
   }
 
-  if (name === 'cluster') { syncClusterMatrixCheck(); }
-  if (name === 'results')  { syncResultsTab(); loadResultsList(); }
-  if (name === 'explore')  loadExploreTopPairs();
+  if (name === "cluster") {
+    syncClusterMatrixCheck();
+  }
+  if (name === "results") {
+    syncResultsTab();
+    loadResultsList();
+  }
+  if (name === "explore") loadExploreTopPairs();
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -73,18 +82,18 @@ function openTab(name, btn) {
 
 async function loadStats() {
   try {
-    const res  = await fetch(`${API}/api/statistics`);
+    const res = await fetch(`${API}/api/statistics`);
     const data = await res.json();
     if (data.success) {
-      setText('stat-countries', data.statistics.total_countries);
+      setText("stat-countries", data.statistics.total_countries);
     }
   } catch (_) {}
 
   try {
-    const res  = await fetch(`${API}/api/cluster/matrix-status`);
+    const res = await fetch(`${API}/api/cluster/matrix-status`);
     const data = await res.json();
     if (data.matrix) {
-      setText('stat-matrix', `${data.matrix.count}×${data.matrix.count}`);
+      setText("stat-matrix", `${data.matrix.count}×${data.matrix.count}`);
     }
   } catch (_) {}
 
@@ -92,8 +101,10 @@ async function loadStats() {
     const res = await fetch(`${API}/api/cluster/results`);
     const data = await res.json();
     if (data.results && data.results.length > 0) {
-      const counts = data.results.map(r => r.n_clusters ?? r.k ?? '—').join(' / ');
-      setText('stat-clusters', counts);
+      const counts = data.results
+        .map((r) => r.n_clusters ?? r.k ?? "—")
+        .join(" / ");
+      setText("stat-clusters", counts);
     }
   } catch (_) {}
 }
@@ -104,50 +115,184 @@ async function loadStats() {
 
 /* Region presets — country names must match exactly what's in your DB */
 const PRESETS = {
-  'middle-east': [
-    'Lebanon','Syria','Jordan','Palestine','Iraq','Iran','Saudi Arabia',
-    'Kuwait','Bahrain','Qatar','United Arab Emirates','Oman','Yemen','Turkey','Cyprus'
+  "middle-east": [
+    "Lebanon",
+    "Syria",
+    "Jordan",
+    "Palestine",
+    "Iraq",
+    "Iran",
+    "Saudi Arabia",
+    "Kuwait",
+    "Bahrain",
+    "Qatar",
+    "United Arab Emirates",
+    "Oman",
+    "Yemen",
+    "Turkey",
+    "Cyprus",
   ],
-  'europe': [
-    'France','Germany','United Kingdom','Italy','Spain','Portugal','Netherlands',
-    'Belgium','Switzerland','Austria','Sweden','Norway','Denmark','Finland','Poland',
-    'Czech Republic','Hungary','Romania','Greece','Croatia','Serbia','Ukraine','Albania',
-    'Andorra','Armenia','Azerbaijan','Belarus','Bosnia and Herzegovina','Bulgaria','Estonia','Georgia',
-    'Iceland','Latvia','Lithuania','Moldova','Montenegro','North Macedonia','Slovakia','Slovenia',
-    'Russia'
+  europe: [
+    "France",
+    "Germany",
+    "United Kingdom",
+    "Italy",
+    "Spain",
+    "Portugal",
+    "Netherlands",
+    "Belgium",
+    "Switzerland",
+    "Austria",
+    "Sweden",
+    "Norway",
+    "Denmark",
+    "Finland",
+    "Poland",
+    "Czech Republic",
+    "Hungary",
+    "Romania",
+    "Greece",
+    "Croatia",
+    "Serbia",
+    "Ukraine",
+    "Albania",
+    "Andorra",
+    "Armenia",
+    "Azerbaijan",
+    "Belarus",
+    "Bosnia and Herzegovina",
+    "Bulgaria",
+    "Estonia",
+    "Georgia",
+    "Iceland",
+    "Latvia",
+    "Lithuania",
+    "Moldova",
+    "Montenegro",
+    "North Macedonia",
+    "Slovakia",
+    "Slovenia",
+    "Russia",
   ],
-  'asia': [
-    'China','Japan','South Korea','India','Pakistan','Bangladesh','Indonesia',
-    'Vietnam','Thailand','Malaysia','Singapore','Philippines','Myanmar','Nepal',
-    'Sri Lanka','Afghanistan','Kazakhstan','Uzbekistan','Mongolia','Lebanon','Syria','Jordan',
-    'Saudi Arabia','Iraq','Iran','Kuwait','Bahrain','Qatar','United Arab Emirates','Oman','Yemen'
+  asia: [
+    "China",
+    "Japan",
+    "South Korea",
+    "India",
+    "Pakistan",
+    "Bangladesh",
+    "Indonesia",
+    "Vietnam",
+    "Thailand",
+    "Malaysia",
+    "Singapore",
+    "Philippines",
+    "Myanmar",
+    "Nepal",
+    "Sri Lanka",
+    "Afghanistan",
+    "Kazakhstan",
+    "Uzbekistan",
+    "Mongolia",
+    "Lebanon",
+    "Syria",
+    "Jordan",
+    "Saudi Arabia",
+    "Iraq",
+    "Iran",
+    "Kuwait",
+    "Bahrain",
+    "Qatar",
+    "United Arab Emirates",
+    "Oman",
+    "Yemen",
   ],
-  'americas': [
-    'United States','Canada','Mexico','Brazil','Argentina','Colombia','Chile',
-    'Peru','Venezuela','Ecuador','Bolivia','Paraguay','Uruguay','Cuba',
-    'Dominican Republic','Haiti','Jamaica','Guatemala','Honduras','Panama',
-    'Costa Rica','El Salvador','Nicaragua','Puerto Rico','Trinidad and Tobago',
-    'Bahamas','Barbados','Belize','Bermuda','Guyana','Suriname'
+  americas: [
+    "United States",
+    "Canada",
+    "Mexico",
+    "Brazil",
+    "Argentina",
+    "Colombia",
+    "Chile",
+    "Peru",
+    "Venezuela",
+    "Ecuador",
+    "Bolivia",
+    "Paraguay",
+    "Uruguay",
+    "Cuba",
+    "Dominican Republic",
+    "Haiti",
+    "Jamaica",
+    "Guatemala",
+    "Honduras",
+    "Panama",
+    "Costa Rica",
+    "El Salvador",
+    "Nicaragua",
+    "Puerto Rico",
+    "Trinidad and Tobago",
+    "Bahamas",
+    "Barbados",
+    "Belize",
+    "Bermuda",
+    "Guyana",
+    "Suriname",
   ],
-  'africa': [
-    'Egypt','Nigeria','South Africa','Kenya','Ethiopia','Ghana','Tanzania',
-    'Morocco','Algeria','Tunisia','Libya','Sudan','Uganda','Cameroon',
-    'Ivory Coast','Senegal','Angola','Mozambique','Zambia','Zimbabwe',
-    'Mali','Niger','Burkina Faso','Madagascar','Botswana','Namibia','Mauritius',
-    'Rwanda','Burundi','Sierra Leone','Liberia','Somalia','Eritrea','Djibouti',
-    'Gambia','Guinea','Guinea-Bissau','Cape Verde','Comoros','São Tomé and Príncipe'
-  ]
+  africa: [
+    "Egypt",
+    "Nigeria",
+    "South Africa",
+    "Kenya",
+    "Ethiopia",
+    "Ghana",
+    "Tanzania",
+    "Morocco",
+    "Algeria",
+    "Tunisia",
+    "Libya",
+    "Sudan",
+    "Uganda",
+    "Cameroon",
+    "Ivory Coast",
+    "Senegal",
+    "Angola",
+    "Mozambique",
+    "Zambia",
+    "Zimbabwe",
+    "Mali",
+    "Niger",
+    "Burkina Faso",
+    "Madagascar",
+    "Botswana",
+    "Namibia",
+    "Mauritius",
+    "Rwanda",
+    "Burundi",
+    "Sierra Leone",
+    "Liberia",
+    "Somalia",
+    "Eritrea",
+    "Djibouti",
+    "Gambia",
+    "Guinea",
+    "Guinea-Bissau",
+    "Cape Verde",
+    "Comoros",
+    "São Tomé and Príncipe",
+  ],
 };
 
 /* Approximate seconds per TED pair */
 const SECS_PER_PAIR = 1.5;
 
-let _allCountries = [];   /* full list from DB */
-let _selected     = new Set();
+let _allCountries = []; /* full list from DB */
+let _selected = new Set();
 
 async function loadCountrySelects() {
   try {
-    const res  = await fetch(`${API}/api/countries`);
+    const res = await fetch(`${API}/api/countries`);
     const data = await res.json();
     _allCountries = data.countries || [];
   } catch (_) {
@@ -160,22 +305,27 @@ async function loadCountrySelects() {
 }
 
 function _buildPickerList(countries) {
-  const list = document.getElementById('picker-list');
+  const list = document.getElementById("picker-list");
   if (!list) return;
-  list.innerHTML = '';
+  list.innerHTML = "";
 
-  countries.forEach(c => {
-    const item = document.createElement('label');
-    item.className = 'picker-item' + (_selected.has(c) ? ' checked' : '');
+  countries.forEach((c) => {
+    const item = document.createElement("label");
+    item.className = "picker-item" + (_selected.has(c) ? " checked" : "");
     item.dataset.name = c.toLowerCase();
 
-    const cb = document.createElement('input');
-    cb.type    = 'checkbox';
-    cb.value   = c;
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.value = c;
     cb.checked = _selected.has(c);
-    cb.addEventListener('change', () => {
-      if (cb.checked) { _selected.add(c); item.classList.add('checked'); }
-      else            { _selected.delete(c); item.classList.remove('checked'); }
+    cb.addEventListener("change", () => {
+      if (cb.checked) {
+        _selected.add(c);
+        item.classList.add("checked");
+      } else {
+        _selected.delete(c);
+        item.classList.remove("checked");
+      }
       _updatePickerCount();
       updateEstimate();
     });
@@ -189,29 +339,34 @@ function _buildPickerList(countries) {
 }
 
 function _updatePickerCount() {
-  const el = document.getElementById('picker-count');
+  const el = document.getElementById("picker-count");
   if (el) el.textContent = `${_selected.size} selected`;
 }
 
 function filterPickerList() {
-  const q     = (document.getElementById('country-search')?.value || '').toLowerCase();
-  const items = document.querySelectorAll('.picker-item');
-  items.forEach(item => {
-    item.classList.toggle('hidden', q.length > 0 && !item.dataset.name.includes(q));
+  const q = (
+    document.getElementById("country-search")?.value || ""
+  ).toLowerCase();
+  const items = document.querySelectorAll(".picker-item");
+  items.forEach((item) => {
+    item.classList.toggle(
+      "hidden",
+      q.length > 0 && !item.dataset.name.includes(q),
+    );
   });
 }
 
 function applyPreset(name) {
-  if (name === 'none') {
+  if (name === "none") {
     _selected.clear();
-  } else if (name === 'all') {
-    _allCountries.forEach(c => _selected.add(c));
+  } else if (name === "all") {
+    _allCountries.forEach((c) => _selected.add(c));
   } else {
     const preset = PRESETS[name] || [];
-    preset.forEach(c => {
+    preset.forEach((c) => {
       /* fuzzy match — tolerate minor name differences */
       const match = _allCountries.find(
-        db => db.toLowerCase() === c.toLowerCase()
+        (db) => db.toLowerCase() === c.toLowerCase(),
       );
       if (match) _selected.add(match);
     });
@@ -222,50 +377,51 @@ function applyPreset(name) {
 }
 
 function updateEstimate() {
-  const banner = document.getElementById('estimate-banner');
-  const icon   = document.getElementById('estimate-icon');
-  const text   = document.getElementById('estimate-text');
+  const banner = document.getElementById("estimate-banner");
+  const icon = document.getElementById("estimate-icon");
+  const text = document.getElementById("estimate-text");
   if (!banner || !text) return;
 
   const n = _selected.size;
 
   if (n === 0) {
-    banner.className = 'estimate-banner';
-    icon.textContent = '📊';
-    text.textContent = 'Select countries below to see time estimate.';
+    banner.className = "estimate-banner";
+    icon.textContent = "📊";
+    text.textContent = "Select countries below to see time estimate.";
     return;
   }
 
-  const pairs   = n * (n - 1) / 2;
-  const secs    = Math.round(pairs * SECS_PER_PAIR);
-  const display = secs < 60
-    ? `~${secs} seconds`
-    : secs < 3600
-      ? `~${Math.round(secs / 60)} minutes`
-      : `~${(secs / 3600).toFixed(1)} hours`;
+  const pairs = (n * (n - 1)) / 2;
+  const secs = Math.round(pairs * SECS_PER_PAIR);
+  const display =
+    secs < 60
+      ? `~${secs} seconds`
+      : secs < 3600
+        ? `~${Math.round(secs / 60)} minutes`
+        : `~${(secs / 3600).toFixed(1)} hours`;
 
   if (n <= 30) {
-    banner.className = 'estimate-banner';
-    icon.textContent = '✅';
+    banner.className = "estimate-banner";
+    icon.textContent = "✅";
   } else if (n <= 60) {
-    banner.className = 'estimate-banner warn';
-    icon.textContent = '⚠️';
+    banner.className = "estimate-banner warn";
+    icon.textContent = "⚠️";
   } else {
-    banner.className = 'estimate-banner danger';
-    icon.textContent = '🐢';
+    banner.className = "estimate-banner danger";
+    icon.textContent = "🐢";
   }
 
-  text.textContent =
-    `${n} countries → ${pairs.toLocaleString()} pairs → estimated ${display}`;
+  text.textContent = `${n} countries → ${pairs.toLocaleString()} pairs → estimated ${display}`;
 }
 
 function _populateExploreSelect(countries) {
-  const sel = document.getElementById('explore-country-select');
+  const sel = document.getElementById("explore-country-select");
   if (!sel) return;
   sel.innerHTML = '<option value="">-- Select Country --</option>';
-  countries.forEach(c => {
-    const opt = document.createElement('option');
-    opt.value = c; opt.textContent = c;
+  countries.forEach((c) => {
+    const opt = document.createElement("option");
+    opt.value = c;
+    opt.textContent = c;
     sel.appendChild(opt);
   });
 }
@@ -277,13 +433,15 @@ function _populateExploreSelect(countries) {
 /* ── List all saved matrices ── */
 async function loadMatrixList(autoSelect = false) {
   try {
-    const res  = await fetch(`${API}/api/cluster/matrices`);
+    const res = await fetch(`${API}/api/cluster/matrices`);
     const data = await res.json();
     const matrices = data.matrices || [];
 
     /* Auto-select most recent if nothing is selected yet */
     if (autoSelect && matrices.length > 0 && !State.activeMatrixId) {
-      await selectMatrix(matrices[0]._id);   /* newest is first (sorted by saved_at DESC) */
+      await selectMatrix(
+        matrices[0]._id,
+      ); /* newest is first (sorted by saved_at DESC) */
     }
 
     _renderMatrixList(matrices);
@@ -293,7 +451,7 @@ async function loadMatrixList(autoSelect = false) {
 }
 
 function _renderMatrixList(matrices) {
-  const container = document.getElementById('matrix-list-container');
+  const container = document.getElementById("matrix-list-container");
   if (!container) return;
 
   if (matrices.length === 0) {
@@ -302,60 +460,63 @@ function _renderMatrixList(matrices) {
     return;
   }
 
-  container.innerHTML = matrices.map(m => {
-    const isActive = m._id === State.activeMatrixId;
-    const countries = (m.countries || []).slice(0, 6).join(', ') +
-                      (m.countries?.length > 6 ? ` … +${m.countries.length - 6} more` : '');
-    return `
-      <div class="saved-card ${isActive ? 'saved-card-active' : ''}" id="mcard-${m._id}">
+  container.innerHTML = matrices
+    .map((m) => {
+      const isActive = m._id === State.activeMatrixId;
+      const countries =
+        (m.countries || []).slice(0, 6).join(", ") +
+        (m.countries?.length > 6 ? ` … +${m.countries.length - 6} more` : "");
+      return `
+      <div class="saved-card ${isActive ? "saved-card-active" : ""}" id="mcard-${m._id}">
         <div class="saved-card-main">
-          <div class="saved-card-title">${m.name || 'Unnamed matrix'}</div>
+          <div class="saved-card-title">${m.name || "Unnamed matrix"}</div>
           <div class="saved-card-meta">
             <span class="saved-badge">${m.count} countries</span>
             <span class="saved-date">${fmtDate(m.saved_at)}</span>
           </div>
-          <div class="saved-card-countries" title="${(m.countries||[]).join(', ')}">
+          <div class="saved-card-countries" title="${(m.countries || []).join(", ")}">
             ${countries}
           </div>
         </div>
         <div class="saved-card-actions">
-          <button class="btn btn-sm ${isActive ? 'btn-primary' : 'btn-secondary'}"
+          <button class="btn btn-sm ${isActive ? "btn-primary" : "btn-secondary"}"
                   onclick="selectMatrix('${m._id}')">
-            ${isActive ? '✓ Selected' : 'Select'}
+            ${isActive ? "✓ Selected" : "Select"}
           </button>
           <button class="btn btn-sm btn-outline-danger"
                   onclick="deleteMatrixById('${m._id}')">🗑</button>
         </div>
       </div>`;
-  }).join('');
+    })
+    .join("");
 }
 
 async function selectMatrix(matrixId) {
   State.activeMatrixId = matrixId;
   /* fetch the full matrix so top-pairs and scatter work */
   try {
-    const res  = await fetch(`${API}/api/cluster/matrix/${matrixId}`);
+    const res = await fetch(`${API}/api/cluster/matrix/${matrixId}`);
     const data = await res.json();
     if (data.success) {
       State.fullMatrix = data.matrix;
       const n = data.matrix.count;
-      setText('stat-matrix', `${n}×${n}`);
+      setText("stat-matrix", `${n}×${n}`);
       /* show top-pairs for this matrix */
-      document.getElementById('top-pairs-section').style.display = '';
+      document.getElementById("top-pairs-section").style.display = "";
       loadTopPairs(matrixId);
     }
   } catch (_) {}
-  loadMatrixList();    /* re-render to show active highlight */
+  loadMatrixList(); /* re-render to show active highlight */
   syncClusterMatrixCheck();
 }
 
 async function deleteMatrixById(matrixId) {
-  if (!confirm('Delete this similarity matrix?')) return;
-  await fetch(`${API}/api/cluster/matrix/${matrixId}`, { method: 'DELETE' });
+  if (!confirm("Delete this similarity matrix?")) return;
+  await fetch(`${API}/api/cluster/matrix/${matrixId}`, { method: "DELETE" });
   if (State.activeMatrixId === matrixId) {
     State.activeMatrixId = null;
-    State.fullMatrix     = null;
-        _scatterCache.coords     = null;
+    State.fullMatrix = null;
+    _scatterCache.coords = null;
   }
   loadMatrixList();
   syncClusterMatrixCheck();
@@ -364,68 +525,80 @@ async function deleteMatrixById(matrixId) {
 /* ── Build a new matrix ── */
 async function buildMatrix(force = false) {
   const countries = _selected.size > 0 ? Array.from(_selected) : null;
-  const name      = document.getElementById('matrix-name-input')?.value.trim() || '';
+  const name = document.getElementById("matrix-name-input")?.value.trim() || "";
 
   if (!countries) {
-    const n     = _allCountries.length;
-    const pairs = n * (n - 1) / 2;
-    const hrs   = ((pairs * SECS_PER_PAIR) / 3600).toFixed(1);
-    if (!confirm(
-      `No countries selected — builds for all ${n} countries ` +
-      `(${pairs.toLocaleString()} pairs, ~${hrs} hours).\n\nContinue?`
-    )) return;
+    const n = _allCountries.length;
+    const pairs = (n * (n - 1)) / 2;
+    const hrs = ((pairs * SECS_PER_PAIR) / 3600).toFixed(1);
+    if (
+      !confirm(
+        `No countries selected — builds for all ${n} countries ` +
+          `(${pairs.toLocaleString()} pairs, ~${hrs} hours).\n\nContinue?`,
+      )
+    )
+      return;
   }
 
-  setStatusBar('matrix-status-bar', 'building', '🔄',
-    `Building new matrix${countries ? ` (${countries.length} countries)` : ''}…`);
-  showBuildProgress(0, 0, '');
+  setStatusBar(
+    "matrix-status-bar",
+    "building",
+    "🔄",
+    `Building new matrix${countries ? ` (${countries.length} countries)` : ""}…`,
+  );
+  showBuildProgress(0, 0, "");
 
   try {
-    const res  = await fetch(`${API}/api/cluster/build-matrix`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ countries, name })
+    const res = await fetch(`${API}/api/cluster/build-matrix`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ countries, name }),
     });
     const data = await res.json();
     if (!data.success) {
-      setStatusBar('matrix-status-bar', 'error', '❌', data.error);
+      setStatusBar("matrix-status-bar", "error", "❌", data.error);
       return;
     }
     _startPoll();
   } catch (e) {
-    setStatusBar('matrix-status-bar', 'error', '❌', e.message);
+    setStatusBar("matrix-status-bar", "error", "❌", e.message);
   }
 }
 
 async function buildMatrixIncremental() {
   if (!State.activeMatrixId) {
-    alert('Select a base matrix first (from the list above).');
+    alert("Select a base matrix first (from the list above).");
     return;
   }
-  const name = document.getElementById('matrix-name-input')?.value.trim() || '';
-  setStatusBar('matrix-status-bar', 'building', '🔄', 'Extending matrix with new countries…');
-  showBuildProgress(0, 0, '');
+  const name = document.getElementById("matrix-name-input")?.value.trim() || "";
+  setStatusBar(
+    "matrix-status-bar",
+    "building",
+    "🔄",
+    "Extending matrix with new countries…",
+  );
+  showBuildProgress(0, 0, "");
   try {
-    const res  = await fetch(`${API}/api/cluster/build-matrix`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ incremental_from: State.activeMatrixId, name })
+    const res = await fetch(`${API}/api/cluster/build-matrix`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ incremental_from: State.activeMatrixId, name }),
     });
     const data = await res.json();
     if (!data.success) {
-      setStatusBar('matrix-status-bar', 'error', '❌', data.error);
+      setStatusBar("matrix-status-bar", "error", "❌", data.error);
       return;
     }
     _startPoll();
   } catch (e) {
-    setStatusBar('matrix-status-bar', 'error', '❌', e.message);
+    setStatusBar("matrix-status-bar", "error", "❌", e.message);
   }
 }
 
 /* ── Build progress polling ── */
 async function refreshBuildStatus() {
   try {
-    const res  = await fetch(`${API}/api/cluster/matrix-status`);
+    const res = await fetch(`${API}/api/cluster/matrix-status`);
     const data = await res.json();
     _applyBuildState(data.build_state || {});
   } catch (_) {}
@@ -433,34 +606,52 @@ async function refreshBuildStatus() {
 
 function _applyBuildState(state) {
   if (state.running) {
-    const pct = state.total > 0
-      ? Math.round((state.done / state.total) * 100) : 0;
-    setStatusBar('matrix-status-bar', 'building', '🔄',
-      `Building… ${state.done}/${state.total} pairs (${pct}%)`);
-    showBuildProgress(state.done, state.total, state.last_pair || '');
+    const pct =
+      state.total > 0 ? Math.round((state.done / state.total) * 100) : 0;
+    setStatusBar(
+      "matrix-status-bar",
+      "building",
+      "🔄",
+      `Building… ${state.done}/${state.total} pairs (${pct}%)`,
+    );
+    showBuildProgress(state.done, state.total, state.last_pair || "");
     _startPoll();
     return;
   }
   hideBuildProgress();
   if (state.error) {
-    setStatusBar('matrix-status-bar', 'error', '❌', `Build error: ${state.error}`);
+    setStatusBar(
+      "matrix-status-bar",
+      "error",
+      "❌",
+      `Build error: ${state.error}`,
+    );
     return;
   }
   if (state.finished && state.matrix_id) {
-    setStatusBar('matrix-status-bar', 'ready', '✅', 'Matrix built and saved successfully.');
+    setStatusBar(
+      "matrix-status-bar",
+      "ready",
+      "✅",
+      "Matrix built and saved successfully.",
+    );
     loadMatrixList();
     /* auto-select the newly built matrix */
     selectMatrix(state.matrix_id);
   } else {
-    setStatusBar('matrix-status-bar', 'unknown', '⏳',
-      'No active build. Select or build a matrix above.');
+    setStatusBar(
+      "matrix-status-bar",
+      "unknown",
+      "⏳",
+      "No active build. Select or build a matrix above.",
+    );
   }
 }
 
 function _startPoll() {
   if (State.pollTimer) return;
   State.pollTimer = setInterval(async () => {
-    const res  = await fetch(`${API}/api/cluster/matrix-status`);
+    const res = await fetch(`${API}/api/cluster/matrix-status`);
     const data = await res.json();
     _applyBuildState(data.build_state || {});
     if (!data.build_state.running) {
@@ -473,32 +664,32 @@ function _startPoll() {
 }
 
 function showBuildProgress(done, total, pair) {
-  const wrap = document.getElementById('build-progress');
+  const wrap = document.getElementById("build-progress");
   if (!wrap) return;
-  wrap.style.display = 'block';
+  wrap.style.display = "block";
   const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  setText('build-progress-text', `${done} / ${total} pairs (${pct}%)`);
-  const el = document.getElementById('build-progress-pair');
+  setText("build-progress-text", `${done} / ${total} pairs (${pct}%)`);
+  const el = document.getElementById("build-progress-pair");
   if (el) el.textContent = pair;
-  const fill = document.getElementById('build-progress-fill');
+  const fill = document.getElementById("build-progress-fill");
   if (fill) fill.style.width = `${pct}%`;
 }
 
 function hideBuildProgress() {
-  const wrap = document.getElementById('build-progress');
-  if (wrap) wrap.style.display = 'none';
+  const wrap = document.getElementById("build-progress");
+  if (wrap) wrap.style.display = "none";
 }
 
 function syncClusterMatrixCheck() {
-  const bar = document.getElementById('cluster-matrix-check');
+  const bar = document.getElementById("cluster-matrix-check");
   if (!bar) return;
   if (State.activeMatrixId && State.fullMatrix) {
     const n = State.fullMatrix.count;
-    bar.className = 'matrix-status-bar matrix-status-ready';
+    bar.className = "matrix-status-bar matrix-status-ready";
     bar.innerHTML = `<span class="status-icon">✅</span>
-      <span class="status-text">Matrix selected — ${n} countries · ${State.fullMatrix.name || ''}</span>`;
+      <span class="status-text">Matrix selected — ${n} countries · ${State.fullMatrix.name || ""}</span>`;
   } else {
-    bar.className = 'matrix-status-bar matrix-status-unknown';
+    bar.className = "matrix-status-bar matrix-status-unknown";
     bar.innerHTML = `<span class="status-icon">⚠️</span>
       <span class="status-text">No matrix selected. Go to Similarity Matrix tab and select one.</span>
       <button class="btn btn-secondary btn-sm"
@@ -510,17 +701,21 @@ function syncClusterMatrixCheck() {
 
 /* ── Top pairs ── */
 async function loadTopPairs(matrixId) {
-  const limit = document.getElementById('top-pairs-limit')?.value || 10;
-  const mid   = matrixId || State.activeMatrixId || '';
+  const limit = document.getElementById("top-pairs-limit")?.value || 10;
+  const mid = matrixId || State.activeMatrixId || "";
   try {
-    const res  = await fetch(`${API}/api/cluster/top-pairs?top=${limit}&matrix_id=${mid}`);
+    const res = await fetch(
+      `${API}/api/cluster/top-pairs?top=${limit}&matrix_id=${mid}`,
+    );
     const data = await res.json();
-    if (data.success) renderPairsTable('top-pairs-container', data.pairs);
+    if (data.success) renderPairsTable("top-pairs-container", data.pairs);
   } catch (_) {}
 }
 
 function renderPairsTable(containerId, pairs) {
-  const rows = pairs.map((p, i) => `
+  const rows = pairs
+    .map(
+      (p, i) => `
     <tr>
       <td style="font-weight:600;color:var(--blue)">${i + 1}</td>
       <td>${p.country1}</td>
@@ -533,7 +728,9 @@ function renderPairsTable(containerId, pairs) {
           <span class="sim-val">${(p.similarity * 100).toFixed(1)}%</span>
         </div>
       </td>
-    </tr>`).join('');
+    </tr>`,
+    )
+    .join("");
 
   document.getElementById(containerId).innerHTML = `
     <div class="pairs-table-wrap">
@@ -551,17 +748,19 @@ function renderPairsTable(containerId, pairs) {
 function switchAlgo(algo) {
   State.currentAlgo = algo;
 
-  document.getElementById('tab-btn-kmeans')
-    .classList.toggle('active', algo === 'kmeans');
+  document
+    .getElementById("tab-btn-kmeans")
+    .classList.toggle("active", algo === "kmeans");
 
-  document.getElementById('tab-btn-agglomerative')
-    .classList.toggle('active', algo === 'agglomerative');
+  document
+    .getElementById("tab-btn-agglomerative")
+    .classList.toggle("active", algo === "agglomerative");
 
-  document.getElementById('params-kmeans').style.display =
-    algo === 'kmeans' ? '' : 'none';
+  document.getElementById("params-kmeans").style.display =
+    algo === "kmeans" ? "" : "none";
 
-  document.getElementById('params-agglomerative').style.display =
-    algo === 'agglomerative' ? '' : 'none';
+  document.getElementById("params-agglomerative").style.display =
+    algo === "agglomerative" ? "" : "none";
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -570,7 +769,7 @@ function switchAlgo(algo) {
 
 async function loadResultsList() {
   try {
-    const res  = await fetch(`${API}/api/cluster/results`);
+    const res = await fetch(`${API}/api/cluster/results`);
     const data = await res.json();
     _renderResultsList(data.results || []);
   } catch (_) {
@@ -580,7 +779,7 @@ async function loadResultsList() {
 
 function _renderResultsList(results) {
   /* The list now lives in the Results tab */
-  const container = document.getElementById('results-list-container');
+  const container = document.getElementById("results-list-container");
   if (!container) return;
 
   if (results.length === 0) {
@@ -589,21 +788,27 @@ function _renderResultsList(results) {
     return;
   }
 
-  container.innerHTML = results.map(r => {
-    const algo  = r.algorithm === 'kmeans' ? 'K-Medoids' : 'Agglomerative Hierarchical Clustering';
-    const param = r.algorithm === 'kmeans'
-      ? `k=${r.k}`
-      : `clusters=${r.n_clusters ?? '—'}`;
-    const sil   = r.silhouette != null ? `Sil: ${Number(r.silhouette).toFixed(3)}` : '';
-    return `
+  container.innerHTML = results
+    .map((r) => {
+      const algo =
+        r.algorithm === "kmeans"
+          ? "K-Medoids"
+          : "Agglomerative Hierarchical Clustering";
+      const param =
+        r.algorithm === "kmeans"
+          ? `k=${r.k}`
+          : `clusters=${r.n_clusters ?? "—"}`;
+      const sil =
+        r.silhouette != null ? `Sil: ${Number(r.silhouette).toFixed(3)}` : "";
+      return `
       <div class="saved-card" id="rcard-${r._id}">
         <div class="saved-card-main">
           <div class="saved-card-title">${r.name || algo}</div>
           <div class="saved-card-meta">
-            <span class="saved-badge algo-pill-${r.algorithm}">${r.algorithm === 'kmeans' ? 'K-Medoids' : 'Agglomerative Hierarchical Clustering'}</span>
+            <span class="saved-badge algo-pill-${r.algorithm}">${r.algorithm === "kmeans" ? "K-Medoids" : "Agglomerative Hierarchical Clustering"}</span>
             <span class="saved-badge">${param}</span>
             <span class="saved-badge">${r.n_countries} countries</span>
-            ${sil  ? `<span class="saved-badge">${sil}</span>`  : ''}
+            ${sil ? `<span class="saved-badge">${sil}</span>` : ""}
             <span class="saved-date">${fmtDate(r.saved_at)}</span>
           </div>
         </div>
@@ -614,32 +819,36 @@ function _renderResultsList(results) {
                   onclick="deleteResultById('${r._id}')">🗑</button>
         </div>
       </div>`;
-  }).join('');
+    })
+    .join("");
 }
 
 async function loadResultById(resultId) {
-  showLoading('Loading result…');
+  showLoading("Loading result…");
   try {
-    const res  = await fetch(`${API}/api/cluster/result/${resultId}`);
+    const res = await fetch(`${API}/api/cluster/result/${resultId}`);
     const data = await res.json();
-    if (!data.success) { alert(data.error); return; }
+    if (!data.success) {
+      alert(data.error);
+      return;
+    }
     State.lastResult = data.result;
     /* also load the associated matrix for scatter */
     const mid = data.result.matrix_id;
     if (mid) {
       try {
-        const mres  = await fetch(`${API}/api/cluster/matrix/${mid}`);
+        const mres = await fetch(`${API}/api/cluster/matrix/${mid}`);
         const mdata = await mres.json();
         if (mdata.success) {
-          State.fullMatrix     = mdata.matrix;
+          State.fullMatrix = mdata.matrix;
           State.activeMatrixId = mid;
-          _scatterCache.coords     = null;
-          _scatterCache.countries  = null;
-                  }
+          _scatterCache.coords = null;
+          _scatterCache.countries = null;
+        }
       } catch (_) {}
     }
     /* switch to results tab */
-    openTab('results', document.querySelectorAll('.nav-btn')[2]);
+    openTab("results", document.querySelectorAll(".nav-btn")[2]);
     renderResult(data.result);
   } catch (e) {
     alert(`Failed: ${e.message}`);
@@ -649,8 +858,8 @@ async function loadResultById(resultId) {
 }
 
 async function deleteResultById(resultId) {
-  if (!confirm('Delete this cluster result?')) return;
-  await fetch(`${API}/api/cluster/result/${resultId}`, { method: 'DELETE' });
+  if (!confirm("Delete this cluster result?")) return;
+  await fetch(`${API}/api/cluster/result/${resultId}`, { method: "DELETE" });
   loadResultsList();
 }
 
@@ -659,51 +868,57 @@ async function deleteResultById(resultId) {
 ══════════════════════════════════════════════════════════════════════════ */
 
 async function runClustering() {
-  const btn = document.getElementById('run-btn');
-  btn.disabled    = true;
-  btn.textContent = '⏳ Running…';
+  const btn = document.getElementById("run-btn");
+  btn.disabled = true;
+  btn.textContent = "⏳ Running…";
 
   if (!State.activeMatrixId) {
-    alert('Please select a similarity matrix first (Similarity Matrix tab).');
-    btn.disabled = false; btn.textContent = '▶ Run Clustering';
+    alert("Please select a similarity matrix first (Similarity Matrix tab).");
+    btn.disabled = false;
+    btn.textContent = "▶ Run Clustering";
     return;
   }
 
   const algo = State.currentAlgo;
-  const name = document.getElementById('result-name-input')?.value.trim() || '';
-  const body = {algorithm: algo,  matrix_id: State.activeMatrixId, name};
+  const name = document.getElementById("result-name-input")?.value.trim() || "";
+  const body = { algorithm: algo, matrix_id: State.activeMatrixId, name };
 
-  if (algo === 'kmeans') {
-    body.k        = parseInt(document.getElementById('km-k').value)        || 3;
-    body.max_iter = parseInt(document.getElementById('km-max-iter').value) || 100;
-    body.n_init   = parseInt(document.getElementById('km-n-init').value)   || 10;
-  } else if (algo === 'agglomerative') {
-    body.n_clusters = parseInt(document.getElementById('agg-n-clusters').value) || 3;
-    body.linkage    = document.getElementById('agg-linkage').value || 'average';
+  if (algo === "kmeans") {
+    body.k = parseInt(document.getElementById("km-k").value) || 3;
+    body.max_iter =
+      parseInt(document.getElementById("km-max-iter").value) || 100;
+    body.n_init = parseInt(document.getElementById("km-n-init").value) || 10;
+  } else if (algo === "agglomerative") {
+    body.n_clusters =
+      parseInt(document.getElementById("agg-n-clusters").value) || 3;
+    body.linkage = document.getElementById("agg-linkage").value || "average";
   }
 
   try {
-    const res  = await fetch(`${API}/api/cluster/run`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify(body)
+    const res = await fetch(`${API}/api/cluster/run`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
     });
     const data = await res.json();
 
-    if (!data.success) { alert(`Clustering failed: ${data.error}`); return; }
+    if (!data.success) {
+      alert(`Clustering failed: ${data.error}`);
+      return;
+    }
 
     State.lastResult = data.result;
-    _scatterCache.coords = null;  /* reset so new result coords are used */
+    _scatterCache.coords = null; /* reset so new result coords are used */
 
     loadStats();
     loadResultsList();
-    openTab('results', document.querySelectorAll('.nav-btn')[2]);
+    openTab("results", document.querySelectorAll(".nav-btn")[2]);
     renderResult(data.result);
   } catch (e) {
     alert(`Request failed: ${e.message}`);
   } finally {
-    btn.disabled    = false;
-    btn.textContent = '▶ Run Clustering';
+    btn.disabled = false;
+    btn.textContent = "▶ Run Clustering";
   }
 }
 /* ══════════════════════════════════════════════════════════════════════════
@@ -715,23 +930,24 @@ function syncResultsTab() {
 }
 
 function renderResult(result) {
-  document.getElementById('results-placeholder').style.display = 'none';
-  document.getElementById('results-main').style.display = '';
+  document.getElementById("results-placeholder").style.display = "none";
+  document.getElementById("results-main").style.display = "";
 
   const algo = result.algorithm;
 
   /* Badge & title */
-  const badge = document.getElementById('results-algo-badge');
-  badge.textContent = algo === 'kmeans' ? 'K-Medoids' : 'Agglomerative Hierarchical Clustering';
-  badge.style.background = algo === 'kmeans' ? 'var(--blue)' : '#059669';
+  const badge = document.getElementById("results-algo-badge");
+  badge.textContent =
+    algo === "kmeans" ? "K-Medoids" : "Agglomerative Hierarchical Clustering";
+  badge.style.background = algo === "kmeans" ? "var(--blue)" : "#059669";
 
-  document.getElementById('results-title').textContent =
-    algo === 'kmeans'
+  document.getElementById("results-title").textContent =
+    algo === "kmeans"
       ? `K-Medoids — k = ${result.k}`
-      : `Agglomerative Hierarchical Clustering — ${result.n_clusters ?? '—'} clusters · ${result.linkage || 'average'} linkage`;
+      : `Agglomerative Hierarchical Clustering — ${result.n_clusters ?? "—"} clusters · ${result.linkage || "average"} linkage`;
 
   /* Meta */
-  document.getElementById('results-meta').innerHTML =
+  document.getElementById("results-meta").innerHTML =
     `<span>${result.n_countries} countries</span>
      <span>·</span>
      <span>${fmtDate(result.computed_at)}</span>`;
@@ -747,33 +963,42 @@ function renderResult(result) {
   renderMergeHistory(result);
 
   /* Default view */
-  switchView('cards');
+  switchView("cards");
 }
 
 /* ── Metrics ──────────────────────────────────────────────────────────────── */
 
 function renderMetrics(result) {
   const tiles = [];
-  if (result.algorithm === 'kmeans') {
-    tiles.push(['Clusters',   result.k]);
-    tiles.push(['Countries',  result.n_countries]);
-    tiles.push(['Total Cost', result.total_cost?.toFixed(4) ?? '—']);
-    tiles.push(['Cohesion',   result.cohesion?.toFixed(4) ?? '—']);
-    tiles.push(['Silhouette', result.silhouette?.toFixed(4) ?? '—']);
+  if (result.algorithm === "kmeans") {
+    tiles.push(["Clusters", result.k]);
+    tiles.push(["Countries", result.n_countries]);
+    tiles.push(["Total Cost", result.total_cost?.toFixed(4) ?? "—"]);
+    tiles.push(["Cohesion", result.cohesion?.toFixed(4) ?? "—"]);
+    tiles.push(["Silhouette", result.silhouette?.toFixed(4) ?? "—"]);
   } else {
-    tiles.push(['Clusters',    result.n_clusters ?? '—']);
-    tiles.push(['Countries',   result.n_countries]);
-    tiles.push(['Linkage',     result.linkage || 'average']);
-    tiles.push(['Cohesion',    result.cohesion?.toFixed(4) ?? '—']);
-    tiles.push(['Silhouette',  result.silhouette?.toFixed(4) ?? '—']);
-    tiles.push(['Runtime',     result.runtime_ms != null ? `${Number(result.runtime_ms).toFixed(1)} ms` : '—']);
+    tiles.push(["Clusters", result.n_clusters ?? "—"]);
+    tiles.push(["Countries", result.n_countries]);
+    tiles.push(["Linkage", result.linkage || "average"]);
+    tiles.push(["Cohesion", result.cohesion?.toFixed(4) ?? "—"]);
+    tiles.push(["Silhouette", result.silhouette?.toFixed(4) ?? "—"]);
+    tiles.push([
+      "Runtime",
+      result.runtime_ms != null
+        ? `${Number(result.runtime_ms).toFixed(1)} ms`
+        : "—",
+    ]);
   }
 
-  document.getElementById('metrics-strip').innerHTML = tiles.map(([lbl, val]) => `
+  document.getElementById("metrics-strip").innerHTML = tiles
+    .map(
+      ([lbl, val]) => `
     <div class="metric-tile">
       <span class="metric-val">${val}</span>
       <span class="metric-lbl">${lbl}</span>
-    </div>`).join('');
+    </div>`,
+    )
+    .join("");
 }
 
 /* ── Colour palette ───────────────────────────────────────────────────────── */
@@ -790,12 +1015,12 @@ function showAgglomerativeOnlyMessage(container, viewName) {
 }
 
 function renderDendrogram(result) {
-  const body = document.getElementById('dendrogram-body');
+  const body = document.getElementById("dendrogram-body");
   if (!body) return;
 
   const history = getAgglomerativeHistory(result);
-  if (result.algorithm !== 'agglomerative' || history.length === 0) {
-    showAgglomerativeOnlyMessage(body, 'Dendrogram');
+  if (result.algorithm !== "agglomerative" || history.length === 0) {
+    showAgglomerativeOnlyMessage(body, "Dendrogram");
     return;
   }
 
@@ -811,25 +1036,31 @@ function renderDendrogram(result) {
 }
 
 function renderMergeHistory(result) {
-  const body = document.getElementById('history-body');
+  const body = document.getElementById("history-body");
   if (!body) return;
 
   const history = getAgglomerativeHistory(result);
-  if (result.algorithm !== 'agglomerative' || history.length === 0) {
-    showAgglomerativeOnlyMessage(body, 'Merge history');
+  if (result.algorithm !== "agglomerative" || history.length === 0) {
+    showAgglomerativeOnlyMessage(body, "Merge history");
     return;
   }
 
-  const maxDist = Math.max(...history.map(m => Number(m.distance) || 0), 1e-9);
-  const cutStep = result.cut_step || Math.max(0, (result.n_countries || 0) - (result.n_clusters || 0));
+  const maxDist = Math.max(
+    ...history.map((m) => Number(m.distance) || 0),
+    1e-9,
+  );
+  const cutStep =
+    result.cut_step ||
+    Math.max(0, (result.n_countries || 0) - (result.n_clusters || 0));
 
-  const rows = history.map(m => {
-    const dist = Number(m.distance) || 0;
-    const width = Math.max(3, Math.round((dist / maxDist) * 100));
-    const members = (m.members || []).join(', ');
-    const isCut = m.step === cutStep;
-    return `
-      <tr class="${isCut ? 'dendro-cut-row' : ''}">
+  const rows = history
+    .map((m) => {
+      const dist = Number(m.distance) || 0;
+      const width = Math.max(3, Math.round((dist / maxDist) * 100));
+      const members = (m.members || []).join(", ");
+      const isCut = m.step === cutStep;
+      return `
+      <tr class="${isCut ? "dendro-cut-row" : ""}">
         <td class="dendro-step">${m.step}</td>
         <td>${m.left} + ${m.right}</td>
         <td>${m.size}</td>
@@ -839,10 +1070,11 @@ function renderMergeHistory(result) {
             <span>${dist.toFixed(4)}</span>
           </div>
         </td>
-        <td>${m.similarity != null ? Number(m.similarity).toFixed(4) : '—'}</td>
+        <td>${m.similarity != null ? Number(m.similarity).toFixed(4) : "—"}</td>
         <td class="dendro-members" title="${escapeHtml(members)}">${escapeHtml(members)}</td>
       </tr>`;
-  }).join('');
+    })
+    .join("");
 
   body.innerHTML = `
     <div class="dendrogram-panel">
@@ -862,7 +1094,8 @@ function renderMergeHistory(result) {
 function buildDendrogramSvg(result, history) {
   const countries = getDendrogramCountryOrder(result, history);
   const n = countries.length;
-  if (!n) return '<p class="saved-empty">No countries available for dendrogram.</p>';
+  if (!n)
+    return '<p class="saved-empty">No countries available for dendrogram.</p>';
 
   const width = Math.max(760, n * 58);
   const height = 420;
@@ -870,15 +1103,22 @@ function buildDendrogramSvg(result, history) {
   const baselineY = height - margin.bottom;
   const plotHeight = baselineY - margin.top;
   const xStep = n > 1 ? (width - margin.left - margin.right) / (n - 1) : 0;
-  const maxDist = Math.max(...history.map(m => Number(m.distance) || 0), 1e-9);
-  const cutStep = result.cut_step || Math.max(0, (result.n_countries || 0) - (result.n_clusters || 0));
-  const cutMerge = history.find(m => Number(m.step) === Number(cutStep));
-  const nextMerge = history.find(m => Number(m.step) === Number(cutStep + 1));
+  const maxDist = Math.max(
+    ...history.map((m) => Number(m.distance) || 0),
+    1e-9,
+  );
+  const cutStep =
+    result.cut_step ||
+    Math.max(0, (result.n_countries || 0) - (result.n_clusters || 0));
+  const cutMerge = history.find((m) => Number(m.step) === Number(cutStep));
+  const nextMerge = history.find((m) => Number(m.step) === Number(cutStep + 1));
   const cutDistance = nextMerge
-    ? ((Number(cutMerge?.distance) || 0) + (Number(nextMerge.distance) || 0)) / 2
-    : (Number(cutMerge?.distance) || maxDist);
+    ? ((Number(cutMerge?.distance) || 0) + (Number(nextMerge.distance) || 0)) /
+      2
+    : Number(cutMerge?.distance) || maxDist;
 
-  const yForDistance = (distance) => baselineY - ((Number(distance) || 0) / maxDist) * plotHeight;
+  const yForDistance = (distance) =>
+    baselineY - ((Number(distance) || 0) / maxDist) * plotHeight;
   const nodes = new Map();
 
   countries.forEach((country, index) => {
@@ -897,8 +1137,12 @@ function buildDendrogramSvg(result, history) {
   for (let i = 0; i <= yTicks; i++) {
     const dist = (maxDist / yTicks) * i;
     const y = yForDistance(dist);
-    parts.push(`<line x1="${margin.left - 12}" y1="${y}" x2="${width - margin.right + 12}" y2="${y}" class="dendro-grid"/>`);
-    parts.push(`<text x="${margin.left - 18}" y="${y + 4}" class="dendro-axis-label" text-anchor="end">${dist.toFixed(2)}</text>`);
+    parts.push(
+      `<line x1="${margin.left - 12}" y1="${y}" x2="${width - margin.right + 12}" y2="${y}" class="dendro-grid"/>`,
+    );
+    parts.push(
+      `<text x="${margin.left - 18}" y="${y + 4}" class="dendro-axis-label" text-anchor="end">${dist.toFixed(2)}</text>`,
+    );
   }
 
   history.forEach((merge) => {
@@ -910,12 +1154,24 @@ function buildDendrogramSvg(result, history) {
     const parentY = yForDistance(Number(merge.distance) || 0);
     const parentId = n + Number(merge.step) - 1;
 
-    parts.push(`<line x1="${left.x}" y1="${left.y}" x2="${left.x}" y2="${parentY}" class="dendro-branch"/>`);
-    parts.push(`<line x1="${right.x}" y1="${right.y}" x2="${right.x}" y2="${parentY}" class="dendro-branch"/>`);
-    parts.push(`<line x1="${left.x}" y1="${parentY}" x2="${right.x}" y2="${parentY}" class="dendro-branch"/>`);
+    parts.push(
+      `<line x1="${left.x}" y1="${left.y}" x2="${left.x}" y2="${parentY}" class="dendro-branch"/>`,
+    );
+    parts.push(
+      `<line x1="${right.x}" y1="${right.y}" x2="${right.x}" y2="${parentY}" class="dendro-branch"/>`,
+    );
+    parts.push(
+      `<line x1="${left.x}" y1="${parentY}" x2="${right.x}" y2="${parentY}" class="dendro-branch"/>`,
+    );
 
-    if (merge.step === 1 || merge.step === history.length || merge.step % 2 === 0) {
-      parts.push(`<text x="${parentX}" y="${parentY - 7}" class="dendro-dist-label" text-anchor="middle">${Number(merge.distance).toFixed(3)}</text>`);
+    if (
+      merge.step === 1 ||
+      merge.step === history.length ||
+      merge.step % 2 === 0
+    ) {
+      parts.push(
+        `<text x="${parentX}" y="${parentY - 7}" class="dendro-dist-label" text-anchor="middle">${Number(merge.distance).toFixed(3)}</text>`,
+      );
     }
 
     nodes.set(parentId, {
@@ -929,25 +1185,39 @@ function buildDendrogramSvg(result, history) {
 
   const cutY = yForDistance(cutDistance);
   if (result.n_clusters > 1) {
-    parts.push(`<line x1="${margin.left - 8}" y1="${cutY}" x2="${width - margin.right + 8}" y2="${cutY}" class="dendro-cut-line"/>`);
-    parts.push(`<text x="${width - margin.right}" y="${cutY - 8}" class="dendro-cut-label" text-anchor="end">cut: ${result.n_clusters} clusters</text>`);
+    parts.push(
+      `<line x1="${margin.left - 8}" y1="${cutY}" x2="${width - margin.right + 8}" y2="${cutY}" class="dendro-cut-line"/>`,
+    );
+    parts.push(
+      `<text x="${width - margin.right}" y="${cutY - 8}" class="dendro-cut-label" text-anchor="end">cut: ${result.n_clusters} clusters</text>`,
+    );
   }
 
   countries.forEach((country, index) => {
     const x = margin.left + index * xStep;
     const short = country.length > 14 ? `${country.slice(0, 12)}...` : country;
-    parts.push(`<circle cx="${x}" cy="${baselineY}" r="4" class="dendro-leaf-dot"><title>${escapeHtml(country)}</title></circle>`);
-    parts.push(`<text x="${x + 5}" y="${baselineY + 16}" class="dendro-leaf-label" transform="rotate(45 ${x + 5} ${baselineY + 16})">${escapeHtml(short)}</text>`);
+    parts.push(
+      `<circle cx="${x}" cy="${baselineY}" r="4" class="dendro-leaf-dot"><title>${escapeHtml(country)}</title></circle>`,
+    );
+    parts.push(
+      `<text x="${x + 5}" y="${baselineY + 16}" class="dendro-leaf-label" transform="rotate(45 ${x + 5} ${baselineY + 16})">${escapeHtml(short)}</text>`,
+    );
   });
 
-  parts.push(`<line x1="${margin.left - 12}" y1="${baselineY}" x2="${width - margin.right + 12}" y2="${baselineY}" class="dendro-axis"/>`);
-  parts.push(`<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${baselineY}" class="dendro-axis"/>`);
-  parts.push(`<text x="${margin.left - 48}" y="${margin.top + 4}" class="dendro-axis-title" text-anchor="middle" transform="rotate(-90 ${margin.left - 48} ${margin.top + 4})">Normalized distance</text>`);
+  parts.push(
+    `<line x1="${margin.left - 12}" y1="${baselineY}" x2="${width - margin.right + 12}" y2="${baselineY}" class="dendro-axis"/>`,
+  );
+  parts.push(
+    `<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${baselineY}" class="dendro-axis"/>`,
+  );
+  parts.push(
+    `<text x="${margin.left - 48}" y="${margin.top + 4}" class="dendro-axis-title" text-anchor="middle" transform="rotate(-90 ${margin.left - 48} ${margin.top + 4})">Normalized distance</text>`,
+  );
 
   return `
     <div class="dendro-svg-wrap">
       <svg class="dendro-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Agglomerative hierarchical dendrogram">
-        ${parts.join('')}
+        ${parts.join("")}
       </svg>
     </div>`;
 }
@@ -960,7 +1230,7 @@ function getDendrogramCountryOrder(result, history) {
 
   const leafIds = new Set();
   const internalIds = new Set();
-  const n = (result.n_countries || 0) || (history.length + 1);
+  const n = result.n_countries || 0 || history.length + 1;
   history.forEach((m) => {
     internalIds.add(n + Number(m.step) - 1);
     [Number(m.left), Number(m.right)].forEach((id) => {
@@ -968,56 +1238,74 @@ function getDendrogramCountryOrder(result, history) {
     });
   });
 
-  const fromHistory = Array.from(leafIds).sort((a, b) => a - b).map(id => {
-    for (const m of history) {
-      const members = m.members || [];
-      if (Number(m.left) === id || Number(m.right) === id) {
-        return members.find(Boolean) || `Item ${id + 1}`;
+  const fromHistory = Array.from(leafIds)
+    .sort((a, b) => a - b)
+    .map((id) => {
+      for (const m of history) {
+        const members = m.members || [];
+        if (Number(m.left) === id || Number(m.right) === id) {
+          return members.find(Boolean) || `Item ${id + 1}`;
+        }
       }
-    }
-    return `Item ${id + 1}`;
-  });
+      return `Item ${id + 1}`;
+    });
 
   return fromHistory.length ? fromHistory : [];
 }
 
 const PALETTE = [
-  '#009edb','#f7941d','#16a34a','#dc2626','#7c3aed',
-  '#0891b2','#d97706','#db2777','#059669','#65a30d',
-  '#4f46e5','#c026d3','#0284c7','#15803d','#b45309'
+  "#009edb",
+  "#f7941d",
+  "#16a34a",
+  "#dc2626",
+  "#7c3aed",
+  "#0891b2",
+  "#d97706",
+  "#db2777",
+  "#059669",
+  "#65a30d",
+  "#4f46e5",
+  "#c026d3",
+  "#0284c7",
+  "#15803d",
+  "#b45309",
 ];
 
 function clusterColor(id) {
-  if (id === 'noise' || id < 0) return '#94a3b8';
+  if (id === "noise" || id < 0) return "#94a3b8";
   return PALETTE[id % PALETTE.length];
 }
 
 /* ── Cards ────────────────────────────────────────────────────────────────── */
 
 function renderCards(result) {
-  const container = document.getElementById('cards-container');
-  container.innerHTML = '';
+  const container = document.getElementById("cards-container");
+  container.innerHTML = "";
 
-  Object.values(result.clusters).forEach(cl => {
-    const color  = clusterColor(cl.id);
-    const repKey = result.algorithm === 'kmeans' ? cl.medoid : cl.representative;
-    const repLabel = result.algorithm === 'kmeans'
-      ? `⭐ Medoid: ${repKey}`
-      : `📍 Rep: ${repKey}`;
+  Object.values(result.clusters).forEach((cl) => {
+    const color = clusterColor(cl.id);
+    //const repKey = result.algorithm === 'kmeans' ? cl.medoid : cl.representative;
+    const repKey = cl.medoid || cl.representative;
+    const repLabel =
+      result.algorithm === "kmeans"
+        ? `⭐ Medoid: ${repKey}`
+        : `📍 Rep: ${repKey}`;
 
-    const chips = cl.members.map(m => {
-      const isRep = m === repKey;
-      return `<span class="member-chip ${isRep ? 'is-rep' : ''}"
-                    style="border-color:${isRep ? color : 'var(--border)'}">${m}</span>`;
-    }).join('');
+    const chips = cl.members
+      .map((m) => {
+        const isRep = m === repKey;
+        return `<span class="member-chip ${isRep ? "is-rep" : ""}"
+                    style="border-color:${isRep ? color : "var(--border)"}">${m}</span>`;
+      })
+      .join("");
 
-    const card = document.createElement('div');
-    card.className = 'cluster-card';
+    const card = document.createElement("div");
+    card.className = "cluster-card";
     card.innerHTML = `
       <div class="cluster-card-head" style="border-left:4px solid ${color}">
         <div class="cluster-card-title-row">
           <span class="cluster-id-pill" style="background:${color}">Cluster ${cl.id}</span>
-          <span class="cluster-size-lbl">${cl.size} countr${cl.size === 1 ? 'y' : 'ies'}</span>
+          <span class="cluster-size-lbl">${cl.size} countr${cl.size === 1 ? "y" : "ies"}</span>
         </div>
         <span class="rep-tag">${repLabel}</span>
       </div>
@@ -1030,44 +1318,55 @@ function renderCards(result) {
 
 function renderTable(result) {
   const repSet = new Set(
-    Object.values(result.clusters).map(cl => cl.medoid || cl.representative)
+    Object.values(result.clusters).map((cl) => cl.medoid || cl.representative),
   );
 
   const rows = Object.entries(result.labels)
     .sort(([, a], [, b]) => {
-      if (a === 'noise') return 1;
-      if (b === 'noise') return -1;
+      if (a === "noise") return 1;
+      if (b === "noise") return -1;
       return (a ?? 0) - (b ?? 0) || 0;
     })
     .map(([country, clusterId], idx) => {
-      const isRep   = repSet.has(country);
-      const color   = clusterColor(clusterId);
-      const clLabel = clusterId === 'noise' ? 'Noise' : `Cluster ${clusterId}`;
-      const role    = clusterId === 'noise' ? '<span class="role-noise">Outlier</span>'
-                    : isRep               ? '<span class="role-rep">⭐ Representative</span>'
-                                          : 'Member';
+      const isRep = repSet.has(country);
+      const color = clusterColor(clusterId);
+      const clLabel = clusterId === "noise" ? "Noise" : `Cluster ${clusterId}`;
+      const role =
+        clusterId === "noise"
+          ? '<span class="role-noise">Outlier</span>'
+          : isRep
+            ? '<span class="role-rep">⭐ Representative</span>'
+            : "Member";
       return `<tr>
         <td style="color:var(--ink-soft);font-size:0.82rem">${idx + 1}</td>
         <td style="font-weight:500">${country}</td>
         <td><span class="cluster-badge" style="background:${color}">${clLabel}</span></td>
         <td>${role}</td>
       </tr>`;
-    }).join('');
+    })
+    .join("");
 
-  document.getElementById('table-body').innerHTML = rows;
+  document.getElementById("table-body").innerHTML = rows;
 }
 
 /* ── View switching ───────────────────────────────────────────────────────── */
 
 function switchView(view) {
-  ['cards','table','heatmap','scatter','dendrogram','history'].forEach(v => {
-    document.getElementById(`vbtn-${v}`).classList.toggle('active', v === view);
-    document.getElementById(`view-${v}`).style.display = v === view ? '' : 'none';
-  });
-  if (view === 'heatmap' && State.lastResult) renderHeatmap();
-  if (view === 'scatter' && State.lastResult) renderScatter();
-  if (view === 'dendrogram' && State.lastResult) renderDendrogram(State.lastResult);
-  if (view === 'history' && State.lastResult) renderMergeHistory(State.lastResult);
+  ["cards", "table", "heatmap", "scatter", "dendrogram", "history"].forEach(
+    (v) => {
+      document
+        .getElementById(`vbtn-${v}`)
+        .classList.toggle("active", v === view);
+      document.getElementById(`view-${v}`).style.display =
+        v === view ? "" : "none";
+    },
+  );
+  if (view === "heatmap" && State.lastResult) renderHeatmap();
+  if (view === "scatter" && State.lastResult) renderScatter();
+  if (view === "dendrogram" && State.lastResult)
+    renderDendrogram(State.lastResult);
+  if (view === "history" && State.lastResult)
+    renderMergeHistory(State.lastResult);
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1086,33 +1385,39 @@ function switchView(view) {
      earlyExaggeration: amplifies cluster separation early on (default 4)
 ══════════════════════════════════════════════════════════════════════════ */
 
-function _tsne(distMatrix, {
-  perplexity      = 8,
-  iterations      = 900,
-  learningRate    = 80,
-  earlyExaggeration = 4,
-  seed            = 42
-} = {}) {
+function _tsne(
+  distMatrix,
+  {
+    perplexity = 8,
+    iterations = 900,
+    learningRate = 80,
+    earlyExaggeration = 4,
+    seed = 42,
+  } = {},
+) {
   const n = distMatrix.length;
 
   /* ── Seeded PRNG (Mulberry32) for reproducible layouts ── */
   let _s = seed >>> 0;
   function rand() {
-    _s |= 0; _s = _s + 0x6D2B79F5 | 0;
-    let t = Math.imul(_s ^ _s >>> 15, 1 | _s);
-    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t;
-    return ((t ^ t >>> 14) >>> 0) / 4294967296;
+    _s |= 0;
+    _s = (_s + 0x6d2b79f5) | 0;
+    let t = Math.imul(_s ^ (_s >>> 15), 1 | _s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   }
 
   /* ── Step 1: compute pairwise affinities P (high-dimensional) ──
      For each point i, fit a Gaussian so that the perplexity of the
      conditional distribution P(j|i) matches the target perplexity.
      P_ij = (P(j|i) + P(i|j)) / (2n)  — symmetrised                */
-  const P = Array.from({length: n}, () => new Float64Array(n));
+  const P = Array.from({ length: n }, () => new Float64Array(n));
 
   for (let i = 0; i < n; i++) {
     /* Binary search for σᵢ that achieves target perplexity */
-    let lo = 0, hi = 1e10, sigma = 1.0;
+    let lo = 0,
+      hi = 1e10,
+      sigma = 1.0;
     const targetEntropy = Math.log(perplexity);
 
     for (let iter = 0; iter < 50; iter++) {
@@ -1136,8 +1441,13 @@ function _tsne(distMatrix, {
       }
 
       /* Adjust sigma via binary search */
-      if (H < targetEntropy) { lo = sigma; sigma = hi < 1e9 ? (sigma + hi) / 2 : sigma * 2; }
-      else                   { hi = sigma; sigma = (lo + sigma) / 2; }
+      if (H < targetEntropy) {
+        lo = sigma;
+        sigma = hi < 1e9 ? (sigma + hi) / 2 : sigma * 2;
+      } else {
+        hi = sigma;
+        sigma = (lo + sigma) / 2;
+      }
     }
 
     /* Store normalised P(j|i) */
@@ -1162,22 +1472,25 @@ function _tsne(distMatrix, {
     }
 
   /* ── Step 2: initialise 2D embedding with small random values ── */
-  let Y  = Array.from({length: n}, () => [(rand()-0.5)*0.01, (rand()-0.5)*0.01]);
-  let Yp = Y.map(p => [...p]);   // previous positions (momentum)
-  const gains = Array.from({length: n}, () => [1, 1]);
+  let Y = Array.from({ length: n }, () => [
+    (rand() - 0.5) * 0.01,
+    (rand() - 0.5) * 0.01,
+  ]);
+  let Yp = Y.map((p) => [...p]); // previous positions (momentum)
+  const gains = Array.from({ length: n }, () => [1, 1]);
 
   /* ── Step 3: gradient descent ── */
   for (let iter = 0; iter < iterations; iter++) {
-    const exagg = iter < 250 ? earlyExaggeration : 1;  // early exaggeration phase
+    const exagg = iter < 250 ? earlyExaggeration : 1; // early exaggeration phase
 
     /* Compute low-dimensional affinities Q (Student t-distribution) */
-    const num = Array.from({length: n}, () => new Float64Array(n));
+    const num = Array.from({ length: n }, () => new Float64Array(n));
     let sumQ = 0;
     for (let i = 0; i < n; i++)
       for (let j = i + 1; j < n; j++) {
         const dx = Y[i][0] - Y[j][0];
         const dy = Y[i][1] - Y[j][1];
-        const v  = 1 / (1 + dx*dx + dy*dy);   // t-distribution kernel
+        const v = 1 / (1 + dx * dx + dy * dy); // t-distribution kernel
         num[i][j] = v;
         num[j][i] = v;
         sumQ += 2 * v;
@@ -1185,11 +1498,11 @@ function _tsne(distMatrix, {
     if (sumQ === 0) sumQ = 1e-10;
 
     /* Gradient: dC/dYᵢ = 4 Σⱼ (exagg·Pᵢⱼ − Qᵢⱼ) · numᵢⱼ · (Yᵢ − Yⱼ) */
-    const grad = Array.from({length: n}, () => [0, 0]);
+    const grad = Array.from({ length: n }, () => [0, 0]);
     for (let i = 0; i < n; i++)
       for (let j = 0; j < n; j++) {
         if (i === j) continue;
-        const Q   = num[i][j] / sumQ;
+        const Q = num[i][j] / sumQ;
         const mul = 4 * (exagg * P[i][j] - Q) * num[i][j];
         grad[i][0] += mul * (Y[i][0] - Y[j][0]);
         grad[i][1] += mul * (Y[i][1] - Y[j][1]);
@@ -1197,15 +1510,18 @@ function _tsne(distMatrix, {
 
     /* Adaptive learning rate (per-parameter gains) + momentum */
     const momentum = iter < 250 ? 0.5 : 0.8;
-    const newY = Y.map(p => [...p]);
+    const newY = Y.map((p) => [...p]);
 
     for (let i = 0; i < n; i++)
       for (let d = 0; d < 2; d++) {
         /* Increase gain if gradient and momentum agree in sign */
-        const sameSign = (grad[i][d] > 0) === ((Y[i][d] - Yp[i][d]) > 0);
-        gains[i][d] = Math.max(0.1, sameSign ? gains[i][d] * 0.8 : gains[i][d] + 0.2);
-        const step  = learningRate * gains[i][d] * grad[i][d];
-        newY[i][d]  = Y[i][d] - step + momentum * (Y[i][d] - Yp[i][d]);
+        const sameSign = grad[i][d] > 0 === Y[i][d] - Yp[i][d] > 0;
+        gains[i][d] = Math.max(
+          0.1,
+          sameSign ? gains[i][d] * 0.8 : gains[i][d] + 0.2,
+        );
+        const step = learningRate * gains[i][d] * grad[i][d];
+        newY[i][d] = Y[i][d] - step + momentum * (Y[i][d] - Yp[i][d]);
       }
 
     /* Centre embedding at origin each iteration */
@@ -1215,10 +1531,10 @@ function _tsne(distMatrix, {
     }
 
     Yp = Y;
-    Y  = newY;
+    Y = newY;
   }
 
-  return Y;   // Array of [x, y] coordinates
+  return Y; // Array of [x, y] coordinates
 }
 
 /* ══════════════════════════════════════════════════════════════════════════
@@ -1233,10 +1549,10 @@ function _tsne(distMatrix, {
 const _scatterCache = { coords: null, countries: null, distMatrix: null };
 
 async function renderScatter() {
-  const canvas  = document.getElementById('scatter-canvas');
-  const tooltip = document.getElementById('scatter-tooltip');
-  const legend  = document.getElementById('scatter-legend');
-  const result  = State.lastResult;
+  const canvas = document.getElementById("scatter-canvas");
+  const tooltip = document.getElementById("scatter-tooltip");
+  const legend = document.getElementById("scatter-legend");
+  const result = State.lastResult;
   if (!canvas || !result) return;
 
   /* ── 1. Use pre-computed t-SNE coords from the backend result ── */
@@ -1247,56 +1563,64 @@ async function renderScatter() {
   if (!result.coords || Object.keys(result.coords).length === 0) {
     canvas.parentElement.innerHTML =
       '<p style="padding:20px;color:var(--ink-soft)">⚠️ No projection coordinates in result. ' +
-      'Re-run clustering to regenerate.</p>';
+      "Re-run clustering to regenerate.</p>";
     return;
   }
 
   // Build parallel arrays in the matrix country order
-  const countriesRaw = State.fullMatrix?.countries
-    || Object.keys(result.coords);
-  const countries = countriesRaw.filter(c => result.coords[c] !== undefined);
-  const coords    = countries.map(c => result.coords[c]);
+  const countriesRaw =
+    State.fullMatrix?.countries || Object.keys(result.coords);
+  const countries = countriesRaw.filter((c) => result.coords[c] !== undefined);
+  const coords = countries.map((c) => result.coords[c]);
   const n = countries.length;
 
   /* ── 2. Canvas sizing ── */
-  const W   = Math.min(760, canvas.parentElement.clientWidth || 760);
-  const H   = Math.round(W * 0.75);
+  const W = Math.min(760, canvas.parentElement.clientWidth || 760);
+  const H = Math.round(W * 0.75);
   const PAD = { top: 52, right: 48, bottom: 52, left: 52 };
-  canvas.width  = W;
+  canvas.width = W;
   canvas.height = H;
-  const ctx = canvas.getContext('2d');
+  const ctx = canvas.getContext("2d");
 
   /* ── 3. Scale coords — extra margin so hulls don't clip ── */
-  const xs = coords.map(p => p[0]);
-  const ys = coords.map(p => p[1]);
-  let xMin = Math.min(...xs), xMax = Math.max(...xs);
-  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  const xs = coords.map((p) => p[0]);
+  const ys = coords.map((p) => p[1]);
+  let xMin = Math.min(...xs),
+    xMax = Math.max(...xs);
+  let yMin = Math.min(...ys),
+    yMax = Math.max(...ys);
   const xPad = (xMax - xMin) * 0.22 || 0.1;
   const yPad = (yMax - yMin) * 0.22 || 0.1;
-  xMin -= xPad; xMax += xPad;
-  yMin -= yPad; yMax += yPad;
+  xMin -= xPad;
+  xMax += xPad;
+  yMin -= yPad;
+  yMax += yPad;
 
   const xRange = xMax - xMin || 1;
   const yRange = yMax - yMin || 1;
-  const plotW  = W - PAD.left - PAD.right;
-  const plotH  = H - PAD.top  - PAD.bottom;
+  const plotW = W - PAD.left - PAD.right;
+  const plotH = H - PAD.top - PAD.bottom;
 
   function toCanvas(px, py) {
     return [
       PAD.left + ((px - xMin) / xRange) * plotW,
-      PAD.top  + (1 - (py - yMin) / yRange) * plotH
+      PAD.top + (1 - (py - yMin) / yRange) * plotH,
     ];
   }
 
   /* ── 4. Lookups ── */
-  const labelMode = document.getElementById('scatter-labels')?.value || 'hover';
-  const dotR      = parseInt(document.getElementById('scatter-dot-size')?.value || 9);
+  const labelMode = document.getElementById("scatter-labels")?.value || "hover";
+  const dotR = parseInt(
+    document.getElementById("scatter-dot-size")?.value || 9,
+  );
 
   const clusterOf = {};
-  Object.entries(result.labels).forEach(([c, cl]) => { clusterOf[c] = cl; });
+  Object.entries(result.labels).forEach(([c, cl]) => {
+    clusterOf[c] = cl;
+  });
 
   const medoidSet = new Set();
-  Object.values(result.clusters).forEach(cl => {
+  Object.values(result.clusters).forEach((cl) => {
     medoidSet.add(cl.medoid || cl.representative);
   });
 
@@ -1304,52 +1628,62 @@ async function renderScatter() {
   const canvasCoords = [];
 
   countries.forEach((country, i) => {
-    const cl      = clusterOf[country];
-    const colorId = (cl === 'noise' || cl === undefined) ? -1
-                  : (typeof cl === 'number' ? cl : parseInt(cl));
-    const color   = clusterColor(colorId);
+    const cl = clusterOf[country];
+    const colorId =
+      cl === "noise" || cl === undefined
+        ? -1
+        : typeof cl === "number"
+          ? cl
+          : parseInt(cl);
+    const color = clusterColor(colorId);
     const [cx, cy] = toCanvas(coords[i][0], coords[i][1]);
     canvasCoords.push({ country, cx, cy, color, cl, colorId });
   });
 
   /* ── 6. Background & grid ── */
-  ctx.fillStyle = '#f8fafc';
+  ctx.fillStyle = "#f8fafc";
   ctx.fillRect(0, 0, W, H);
-  ctx.strokeStyle = '#e2e8f0';
-  ctx.lineWidth   = 1;
+  ctx.strokeStyle = "#e2e8f0";
+  ctx.lineWidth = 1;
   for (let gx = 0; gx <= 5; gx++) {
     const x = PAD.left + (gx / 5) * plotW;
-    ctx.beginPath(); ctx.moveTo(x, PAD.top); ctx.lineTo(x, PAD.top + plotH); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(x, PAD.top);
+    ctx.lineTo(x, PAD.top + plotH);
+    ctx.stroke();
   }
   for (let gy = 0; gy <= 5; gy++) {
     const y = PAD.top + (gy / 5) * plotH;
-    ctx.beginPath(); ctx.moveTo(PAD.left, y); ctx.lineTo(PAD.left + plotW, y); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(PAD.left, y);
+    ctx.lineTo(PAD.left + plotW, y);
+    ctx.stroke();
   }
-  ctx.strokeStyle = '#cbd5e1';
+  ctx.strokeStyle = "#cbd5e1";
   ctx.strokeRect(PAD.left, PAD.top, plotW, plotH);
 
   /* Axis labels */
-  ctx.font      = '11px -apple-system,sans-serif';
-  ctx.fillStyle = '#94a3b8';
-  ctx.textAlign = 'center';
-  ctx.fillText('t-SNE Dimension 1', PAD.left + plotW / 2, H - 12);
+  ctx.font = "11px -apple-system,sans-serif";
+  ctx.fillStyle = "#94a3b8";
+  ctx.textAlign = "center";
+  ctx.fillText("t-SNE Dimension 1", PAD.left + plotW / 2, H - 12);
   ctx.save();
   ctx.translate(14, PAD.top + plotH / 2);
   ctx.rotate(-Math.PI / 2);
-  ctx.fillText('t-SNE Dimension 2', 0, 0);
+  ctx.fillText("t-SNE Dimension 2", 0, 0);
   ctx.restore();
 
   /* ── 7. Draw dots ── */
   canvasCoords.forEach(({ country, cx, cy, color, cl }) => {
     const isMedoid = medoidSet.has(country);
-    const r        = dotR;
+    const r = dotR;
 
     /* Outer ring for medoid */
     if (isMedoid) {
       ctx.beginPath();
       ctx.arc(cx, cy, r + 5, 0, Math.PI * 2);
       ctx.strokeStyle = color;
-      ctx.lineWidth   = 2;
+      ctx.lineWidth = 2;
       ctx.globalAlpha = 0.4;
       ctx.stroke();
       ctx.globalAlpha = 1;
@@ -1357,25 +1691,26 @@ async function renderScatter() {
 
     ctx.beginPath();
     ctx.arc(cx, cy, r, 0, Math.PI * 2);
-    ctx.fillStyle   = color;
+    ctx.fillStyle = color;
     ctx.globalAlpha = isMedoid ? 1.0 : 0.85;
     ctx.fill();
     ctx.globalAlpha = 1;
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = isMedoid ? 2.5 : 1.5;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = isMedoid ? 2.5 : 1.5;
     ctx.stroke();
 
     /* Country label */
-    const showLabel = labelMode === 'always' || (labelMode === 'reps' && isMedoid);
+    const showLabel =
+      labelMode === "always" || (labelMode === "reps" && isMedoid);
     if (showLabel) {
-      const label = country.length > 13 ? country.slice(0, 12) + '…' : country;
-      ctx.font        = `${isMedoid ? '700' : '500'} ${isMedoid ? 11 : 10}px -apple-system,sans-serif`;
-      ctx.fillStyle   = '#1e293b';
-      ctx.textAlign   = 'center';
-      ctx.shadowColor = '#fff';
-      ctx.shadowBlur  = 3;
+      const label = country.length > 13 ? country.slice(0, 12) + "…" : country;
+      ctx.font = `${isMedoid ? "700" : "500"} ${isMedoid ? 11 : 10}px -apple-system,sans-serif`;
+      ctx.fillStyle = "#1e293b";
+      ctx.textAlign = "center";
+      ctx.shadowColor = "#fff";
+      ctx.shadowBlur = 3;
       ctx.fillText(label, cx, cy - r - 5);
-      ctx.shadowBlur  = 0;
+      ctx.shadowBlur = 0;
     }
   });
 
@@ -1384,76 +1719,95 @@ async function renderScatter() {
      This is guaranteed correct regardless of algorithm, because canvasCoords
      are the definitive positions already scaled and projected onto the canvas. */
   Object.entries(result.clusters).forEach(([clKey, cl]) => {
-    const colorId  = parseInt(clKey);
-    const memberPts = canvasCoords.filter(p => String(p.cl) === String(clKey));
+    const colorId = parseInt(clKey);
+    const memberPts = canvasCoords.filter(
+      (p) => String(p.cl) === String(clKey),
+    );
     if (!memberPts.length) return;
 
     const cx = memberPts.reduce((s, p) => s + p.cx, 0) / memberPts.length;
     const cy = memberPts.reduce((s, p) => s + p.cy, 0) / memberPts.length;
 
-    const ARM = 14, TH = 3;
+    const ARM = 14,
+      TH = 3;
 
     /* White halo */
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = TH + 3;
-    ctx.lineCap     = 'round';
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = TH + 3;
+    ctx.lineCap = "round";
     ctx.beginPath();
-    ctx.moveTo(cx - ARM, cy); ctx.lineTo(cx + ARM, cy);
-    ctx.moveTo(cx, cy - ARM); ctx.lineTo(cx, cy + ARM);
+    ctx.moveTo(cx - ARM, cy);
+    ctx.lineTo(cx + ARM, cy);
+    ctx.moveTo(cx, cy - ARM);
+    ctx.lineTo(cx, cy + ARM);
     ctx.stroke();
 
     /* Dark cross */
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth   = TH;
+    ctx.strokeStyle = "#1e293b";
+    ctx.lineWidth = TH;
     ctx.beginPath();
-    ctx.moveTo(cx - ARM, cy); ctx.lineTo(cx + ARM, cy);
-    ctx.moveTo(cx, cy - ARM); ctx.lineTo(cx, cy + ARM);
+    ctx.moveTo(cx - ARM, cy);
+    ctx.lineTo(cx + ARM, cy);
+    ctx.moveTo(cx, cy - ARM);
+    ctx.lineTo(cx, cy + ARM);
     ctx.stroke();
   });
 
   /* ── 10. Tooltip ── */
-  canvas._coords    = canvasCoords;
-  canvas._dotR      = dotR;
+  canvas._coords = canvasCoords;
+  canvas._dotR = dotR;
   canvas._medoidSet = medoidSet;
 
   canvas.onmousemove = (e) => {
-    const rect   = canvas.getBoundingClientRect();
-    const scaleX = canvas.width  / rect.width;
+    const rect = canvas.getBoundingClientRect();
+    const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
     const mx = (e.clientX - rect.left) * scaleX;
-    const my = (e.clientY - rect.top)  * scaleY;
+    const my = (e.clientY - rect.top) * scaleY;
     let hit = null;
     for (const pt of canvas._coords) {
-      const dx = pt.cx - mx, dy = pt.cy - my;
-      if (Math.sqrt(dx*dx + dy*dy) <= canvas._dotR + 6) { hit = pt; break; }
+      const dx = pt.cx - mx,
+        dy = pt.cy - my;
+      if (Math.sqrt(dx * dx + dy * dy) <= canvas._dotR + 6) {
+        hit = pt;
+        break;
+      }
     }
     if (hit) {
-      const isRep   = canvas._medoidSet.has(hit.country);
-      const clLabel = hit.cl === 'noise' ? 'Noise' : `Cluster ${hit.cl}`;
-      const repLabel = result.algorithm === 'kmeans' ? '★ Representative (closest to centroid)' : '★ Representative';
+      const isRep = canvas._medoidSet.has(hit.country);
+      const clLabel = hit.cl === "noise" ? "Noise" : `Cluster ${hit.cl}`;
+      const repLabel =
+        result.algorithm === "kmeans"
+          ? "★ Representative (closest to centroid)"
+          : "★ Representative";
       tooltip.innerHTML =
         `<strong>${hit.country}</strong><br>${clLabel}` +
-        (isRep ? `<br><span style="color:#fbbf24">${repLabel}</span>` : '');
-      tooltip.style.display = 'block';
+        (isRep ? `<br><span style="color:#fbbf24">${repLabel}</span>` : "");
+      tooltip.style.display = "block";
       const wrapRect = canvas.parentElement.getBoundingClientRect();
       tooltip.style.left = `${e.clientX - wrapRect.left + 14}px`;
-      tooltip.style.top  = `${e.clientY - wrapRect.top  - 12}px`;
+      tooltip.style.top = `${e.clientY - wrapRect.top - 12}px`;
     } else {
-      tooltip.style.display = 'none';
+      tooltip.style.display = "none";
     }
   };
-  canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
+  canvas.onmouseleave = () => {
+    tooltip.style.display = "none";
+  };
 
   /* ── 11. Legend ── */
   const seenClusters = new Set();
-  const legendItems  = [];
+  const legendItems = [];
   canvasCoords.forEach(({ cl, color }) => {
     const key = String(cl);
-    if (!seenClusters.has(key)) { seenClusters.add(key); legendItems.push({ cl, color }); }
+    if (!seenClusters.has(key)) {
+      seenClusters.add(key);
+      legendItems.push({ cl, color });
+    }
   });
   legendItems.sort((a, b) => {
-    if (a.cl === 'noise') return 1;
-    if (b.cl === 'noise') return -1;
+    if (a.cl === "noise") return 1;
+    if (b.cl === "noise") return -1;
     return (parseInt(a.cl) || 0) - (parseInt(b.cl) || 0);
   });
 
@@ -1472,79 +1826,86 @@ async function renderScatter() {
       </svg>
       <span>Representative — country closest to centroid</span>
     </div>
-    ${legendItems.map(({ cl, color }) => {
-      const label = cl === 'noise' ? 'Noise / Outlier' : `Cluster ${cl}`;
-      return `<div class="scatter-legend-item">
+    ${legendItems
+      .map(({ cl, color }) => {
+        const label = cl === "noise" ? "Noise / Outlier" : `Cluster ${cl}`;
+        return `<div class="scatter-legend-item">
         <div class="scatter-legend-dot" style="background:${color}"></div>
         <span>${label}</span>
       </div>`;
-    }).join('')}`;
+      })
+      .join("")}`;
 }
 
 function downloadScatter() {
-  const canvas = document.getElementById('scatter-canvas');
+  const canvas = document.getElementById("scatter-canvas");
   if (!canvas) return;
-  const link    = document.createElement('a');
-  link.download = 'cluster_scatter.png';
-  link.href     = canvas.toDataURL('image/png');
+  const link = document.createElement("a");
+  link.download = "cluster_scatter.png";
+  link.href = canvas.toDataURL("image/png");
   link.click();
 }
 
 /* ── Heatmap ──────────────────────────────────────────────────────────────── */
 
 async function renderHeatmap() {
-  const wrap   = document.getElementById('heatmap-wrap');
+  const wrap = document.getElementById("heatmap-wrap");
   const result = State.lastResult;
   if (!result) return;
 
-  wrap.innerHTML = '<p style="color:var(--ink-soft);padding:16px">Loading heatmap…</p>';
+  wrap.innerHTML =
+    '<p style="color:var(--ink-soft);padding:16px">Loading heatmap…</p>';
 
   /* Fetch matrix metadata to get country list */
   let matrixCountries;
   try {
-    const res  = await fetch(`${API}/api/cluster/matrix-status`);
+    const res = await fetch(`${API}/api/cluster/matrix-status`);
     const data = await res.json();
     if (!data.matrix) {
-      wrap.innerHTML = '<p style="color:var(--ink-soft);padding:16px">No matrix available for heatmap.</p>';
+      wrap.innerHTML =
+        '<p style="color:var(--ink-soft);padding:16px">No matrix available for heatmap.</p>';
       return;
     }
     matrixCountries = data.matrix.countries;
   } catch (_) {
-    wrap.innerHTML = '<p style="color:var(--ink-soft);padding:16px">Could not load matrix metadata.</p>';
+    wrap.innerHTML =
+      '<p style="color:var(--ink-soft);padding:16px">Could not load matrix metadata.</p>';
     return;
   }
 
-  const limitVal = document.getElementById('heatmap-limit')?.value || '20';
-  const sortBy   = document.getElementById('heatmap-sort')?.value  || 'cluster';
+  const limitVal = document.getElementById("heatmap-limit")?.value || "20";
+  const sortBy = document.getElementById("heatmap-sort")?.value || "cluster";
 
   let countries = [...matrixCountries];
 
-  if (sortBy === 'cluster' && result.labels) {
+  if (sortBy === "cluster" && result.labels) {
     countries.sort((a, b) => {
-      const la = result.labels[a] === 'noise' ? 9999 : (result.labels[a] ?? 9999);
-      const lb = result.labels[b] === 'noise' ? 9999 : (result.labels[b] ?? 9999);
+      const la =
+        result.labels[a] === "noise" ? 9999 : (result.labels[a] ?? 9999);
+      const lb =
+        result.labels[b] === "noise" ? 9999 : (result.labels[b] ?? 9999);
       return la - lb || a.localeCompare(b);
     });
   } else {
     countries.sort();
   }
 
-  if (limitVal !== '0') countries = countries.slice(0, parseInt(limitVal));
+  if (limitVal !== "0") countries = countries.slice(0, parseInt(limitVal));
 
-  const n    = countries.length;
+  const n = countries.length;
   const CELL = Math.max(10, Math.min(28, Math.floor(520 / n)));
-  const PAD  = 90;  /* left/top padding for labels */
+  const PAD = 90; /* left/top padding for labels */
 
-  const canvas = document.createElement('canvas');
-  canvas.width  = PAD + n * CELL;
+  const canvas = document.createElement("canvas");
+  canvas.width = PAD + n * CELL;
   canvas.height = PAD + n * CELL;
-  const ctx = canvas.getContext('2d');
-  ctx.fillStyle = '#fff';
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   /* Draw cells */
   const repSet = new Set(
-    Object.values(result.clusters).map(cl => cl.medoid || cl.representative)
+    Object.values(result.clusters).map((cl) => cl.medoid || cl.representative),
   );
 
   for (let row = 0; row < n; row++) {
@@ -1555,7 +1916,7 @@ async function renderHeatmap() {
       } else {
         const cRow = result.labels?.[countries[row]];
         const cCol = result.labels?.[countries[col]];
-        if (cRow !== undefined && cRow !== 'noise' && cRow === cCol) {
+        if (cRow !== undefined && cRow !== "noise" && cRow === cCol) {
           sim = 0.68;
         }
       }
@@ -1565,10 +1926,10 @@ async function renderHeatmap() {
   }
 
   /* Cluster boundary lines */
-  if (sortBy === 'cluster' && result.labels) {
+  if (sortBy === "cluster" && result.labels) {
     let prevCluster = result.labels[countries[0]];
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth   = 2;
+    ctx.strokeStyle = "#fff";
+    ctx.lineWidth = 2;
     for (let i = 1; i < n; i++) {
       const c = result.labels[countries[i]];
       if (c !== prevCluster) {
@@ -1588,41 +1949,42 @@ async function renderHeatmap() {
   /* Row / column labels */
   const fontSize = Math.max(8, Math.min(11, CELL - 2));
   ctx.font = `${fontSize}px -apple-system,sans-serif`;
-  ctx.fillStyle = '#3d4f5e';
+  ctx.fillStyle = "#3d4f5e";
 
   for (let i = 0; i < n; i++) {
-    const label = countries[i].length > 14 ? countries[i].slice(0, 13) + '…' : countries[i];
+    const label =
+      countries[i].length > 14 ? countries[i].slice(0, 13) + "…" : countries[i];
 
     /* Row label (right-aligned) */
-    ctx.textAlign    = 'right';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "right";
+    ctx.textBaseline = "middle";
     ctx.fillText(label, PAD - 4, PAD + i * CELL + CELL / 2);
 
     /* Column label (rotated) */
     ctx.save();
     ctx.translate(PAD + i * CELL + CELL / 2, PAD - 4);
     ctx.rotate(-Math.PI / 2);
-    ctx.textAlign    = 'left';
-    ctx.textBaseline = 'middle';
+    ctx.textAlign = "left";
+    ctx.textBaseline = "middle";
     ctx.fillText(label, 0, 0);
     ctx.restore();
   }
 
-  wrap.innerHTML = '';
+  wrap.innerHTML = "";
   wrap.appendChild(canvas);
 }
 
 function simToColor(sim) {
   /* Low (red) → mid (orange) → high (green)  matching the sim bar */
-  const r = sim < 0.5
-    ? 220
-    : Math.round(220 - (sim - 0.5) * 2 * 190);
-  const g = sim < 0.5
-    ? Math.round(sim * 2 * 167)
-    : Math.round(167 + (sim - 0.5) * 2 * (40 - 167));
-  const b = sim < 0.5
-    ? Math.round(sim * 2 * 69)
-    : Math.round(69 * (1 - (sim - 0.5) * 2));
+  const r = sim < 0.5 ? 220 : Math.round(220 - (sim - 0.5) * 2 * 190);
+  const g =
+    sim < 0.5
+      ? Math.round(sim * 2 * 167)
+      : Math.round(167 + (sim - 0.5) * 2 * (40 - 167));
+  const b =
+    sim < 0.5
+      ? Math.round(sim * 2 * 69)
+      : Math.round(69 * (1 - (sim - 0.5) * 2));
   return `rgb(${r},${g},${b})`;
 }
 
@@ -1631,20 +1993,30 @@ function simToColor(sim) {
 ══════════════════════════════════════════════════════════════════════════ */
 
 async function lookupNeighbours() {
-  const country = document.getElementById('explore-country-select').value;
-  const topN    = parseInt(document.getElementById('explore-top-n').value) || 5;
+  const country = document.getElementById("explore-country-select").value;
+  const topN = parseInt(document.getElementById("explore-top-n").value) || 5;
 
-  if (!country) { alert('Please select a country.'); return; }
+  if (!country) {
+    alert("Please select a country.");
+    return;
+  }
 
   showLoading(`Finding neighbours for ${country}…`);
   try {
-    const res  = await fetch(`${API}/api/cluster/neighbors/${encodeURIComponent(country)}?top=${topN}`);
+    const res = await fetch(
+      `${API}/api/cluster/neighbors/${encodeURIComponent(country)}?top=${topN}`,
+    );
     const data = await res.json();
     hideLoading();
 
-    if (!data.success) { alert(data.error); return; }
+    if (!data.success) {
+      alert(data.error);
+      return;
+    }
 
-    const rows = data.neighbors.map((n, i) => `
+    const rows = data.neighbors
+      .map(
+        (n, i) => `
       <tr>
         <td style="font-weight:600;color:var(--blue)">${i + 1}</td>
         <td style="font-weight:500">${n.country}</td>
@@ -1656,10 +2028,12 @@ async function lookupNeighbours() {
             <span class="sim-val">${(n.similarity * 100).toFixed(1)}%</span>
           </div>
         </td>
-      </tr>`).join('');
+      </tr>`,
+      )
+      .join("");
 
-    document.getElementById('neighbours-result').style.display = '';
-    document.getElementById('neighbours-container').innerHTML = `
+    document.getElementById("neighbours-result").style.display = "";
+    document.getElementById("neighbours-container").innerHTML = `
       <div class="pairs-table-wrap">
         <table class="pairs-table">
           <thead><tr><th>#</th><th>Country</th><th>Similarity to ${country}</th></tr></thead>
@@ -1673,15 +2047,18 @@ async function lookupNeighbours() {
 }
 
 async function loadExploreTopPairs() {
-  const section = document.getElementById('top-pairs-explore-section');
-  if (!State.matrixMeta) { section.style.display = 'none'; return; }
+  const section = document.getElementById("top-pairs-explore-section");
+  if (!State.matrixMeta) {
+    section.style.display = "none";
+    return;
+  }
 
   try {
-    const res  = await fetch(`${API}/api/cluster/top-pairs?top=10`);
+    const res = await fetch(`${API}/api/cluster/top-pairs?top=10`);
     const data = await res.json();
     if (data.success) {
-      section.style.display = '';
-      renderPairsTable('top-pairs-explore-container', data.pairs);
+      section.style.display = "";
+      renderPairsTable("top-pairs-explore-container", data.pairs);
     }
   } catch (_) {}
 }
@@ -1694,8 +2071,8 @@ function setStatusBar(id, state, icon, text) {
   const bar = document.getElementById(id);
   if (!bar) return;
   bar.className = `matrix-status-bar matrix-status-${state}`;
-  const icon_el = bar.querySelector('.status-icon');
-  const text_el = bar.querySelector('.status-text');
+  const icon_el = bar.querySelector(".status-icon");
+  const text_el = bar.querySelector(".status-text");
   if (icon_el) icon_el.textContent = icon;
   if (text_el) text_el.textContent = text;
 }
@@ -1706,30 +2083,34 @@ function setText(id, val) {
 }
 
 function fmtDate(iso) {
-  if (!iso) return '—';
+  if (!iso) return "—";
   try {
     return new Date(iso).toLocaleString(undefined, {
-      month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit'
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
-  } catch (_) { return iso; }
+  } catch (_) {
+    return iso;
+  }
 }
-
 
 function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+  return String(value ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
 }
 
-function showLoading(msg = 'Loading…') {
-  const el = document.getElementById('global-loading');
-  document.getElementById('loading-msg').textContent = msg;
-  el.classList.add('visible');
+function showLoading(msg = "Loading…") {
+  const el = document.getElementById("global-loading");
+  document.getElementById("loading-msg").textContent = msg;
+  el.classList.add("visible");
 }
 
 function hideLoading() {
-  document.getElementById('global-loading').classList.remove('visible');
+  document.getElementById("global-loading").classList.remove("visible");
 }

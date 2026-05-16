@@ -61,13 +61,34 @@
         border: 1px solid transparent;
       }
 
-      .matrix-status-bar .status-icon { font-size: 1.1rem; flex-shrink: 0; }
-      .matrix-status-bar .status-text { flex: 1; }
+      .matrix-status-bar .status-icon {
+        font-size: 1.1rem;
+        flex-shrink: 0;
+      }
+      .matrix-status-bar .status-text {
+        flex: 1;
+      }
 
-      .matrix-status-ready   { background: #f0fdf4; border-color: #86efac; color: #166534; }
-      .matrix-status-building{ background: var(--blue-light); border-color: #93c5fd; color: var(--blue-dark); }
-      .matrix-status-error   { background: #fef2f2; border-color: #fca5a5; color: #991b1b; }
-      .matrix-status-unknown { background: var(--surface); border-color: var(--border); color: var(--ink-soft); }
+      .matrix-status-ready {
+        background: #f0fdf4;
+        border-color: #86efac;
+        color: #166534;
+      }
+      .matrix-status-building {
+        background: var(--blue-light);
+        border-color: #93c5fd;
+        color: var(--blue-dark);
+      }
+      .matrix-status-error {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
+      }
+      .matrix-status-unknown {
+        background: var(--surface);
+        border-color: var(--border);
+        color: var(--ink-soft);
+      }
 
       /* ── Matrix form row ─────────────────────── */
       .matrix-form-row {
@@ -104,7 +125,7 @@
       .matrix-select-group select[multiple]:focus {
         outline: none;
         border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(0,158,219,0.12);
+        box-shadow: 0 0 0 3px rgba(0, 158, 219, 0.12);
       }
 
       .field-hint {
@@ -164,7 +185,9 @@
         color: var(--ink-soft);
         cursor: pointer;
         margin-bottom: -2px;
-        transition: color 0.15s, border-color 0.15s;
+        transition:
+          color 0.15s,
+          border-color 0.15s;
       }
 
       .algo-tab-btn.active {
@@ -172,7 +195,9 @@
         border-bottom-color: var(--blue);
       }
 
-      .algo-tab-btn:hover:not(.active) { color: var(--ink); }
+      .algo-tab-btn:hover:not(.active) {
+        color: var(--ink);
+      }
 
       /* ── Algo description ────────────────────── */
       .algo-description {
@@ -212,13 +237,15 @@
         color: var(--ink);
         background: var(--surface);
         box-sizing: border-box;
-        transition: border-color 0.15s, box-shadow 0.15s;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
       }
 
       .param-item input[type="number"]:focus {
         outline: none;
         border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(0,158,219,0.12);
+        box-shadow: 0 0 0 3px rgba(0, 158, 219, 0.12);
       }
 
       .btn-run {
@@ -248,8 +275,14 @@
         letter-spacing: 0.05em;
       }
 
-      .algo-pill-kmeans { background: var(--blue-light); color: var(--blue-dark); }
-      .algo-pill-agglomerative { background: #ecfdf5; color: #065f46; }
+      .algo-pill-kmeans {
+        background: var(--blue-light);
+        color: var(--blue-dark);
+      }
+      .algo-pill-agglomerative {
+        background: #ecfdf5;
+        color: #065f46;
+      }
 
       /* ── Metrics strip ───────────────────────── */
       .metrics-strip {
@@ -331,7 +364,9 @@
         overflow: hidden;
         background: var(--white);
         box-shadow: var(--shadow-sm);
-        transition: box-shadow 0.2s, transform 0.2s;
+        transition:
+          box-shadow 0.2s,
+          transform 0.2s;
       }
 
       .cluster-card:hover {
@@ -436,8 +471,12 @@
         color: var(--ink);
       }
 
-      .cluster-table tbody tr:hover td { background: var(--blue-light); }
-      .cluster-table tbody tr:last-child td { border-bottom: none; }
+      .cluster-table tbody tr:hover td {
+        background: var(--blue-light);
+      }
+      .cluster-table tbody tr:last-child td {
+        border-bottom: none;
+      }
 
       .cluster-badge {
         color: var(--white);
@@ -449,8 +488,13 @@
         letter-spacing: 0.04em;
       }
 
-      .role-rep  { color: var(--orange); font-weight: 700; }
-      .role-noise{ color: var(--ink-soft); }
+      .role-rep {
+        color: var(--orange);
+        font-weight: 700;
+      }
+      .role-noise {
+        color: var(--ink-soft);
+      }
 
       /* ── Heatmap ─────────────────────────────── */
       .heatmap-controls {
@@ -496,8 +540,12 @@
         max-width: 200px;
         height: 10px;
         border-radius: 5px;
-        background: linear-gradient(to right,
-          rgb(220,53,69), rgb(253,126,20), rgb(40,167,69));
+        background: linear-gradient(
+          to right,
+          rgb(220, 53, 69),
+          rgb(253, 126, 20),
+          rgb(40, 167, 69)
+        );
       }
 
       /* ── Dendrogram panel ─────────────────────── */
@@ -519,7 +567,9 @@
         color: #6b7280;
         margin: 0 0 12px;
       }
-      .dendro-table-wrap { overflow-x: auto; }
+      .dendro-table-wrap {
+        overflow-x: auto;
+      }
       .dendro-table {
         width: 100%;
         border-collapse: collapse;
@@ -537,11 +587,26 @@
         border-bottom: 1px solid #e5e7eb;
         vertical-align: middle;
       }
-      .dendro-table tr:last-child td { border-bottom: none; }
-      .dendro-table tr.dendro-cut-row td { background: #fef3c7; font-weight: 600; }
-      .dendro-step { color: #6b7280; width: 48px; text-align: center; }
-      .dendro-sim  { width: 200px; }
-      .dendro-bar-wrap { display: flex; align-items: center; gap: 8px; }
+      .dendro-table tr:last-child td {
+        border-bottom: none;
+      }
+      .dendro-table tr.dendro-cut-row td {
+        background: #fef3c7;
+        font-weight: 600;
+      }
+      .dendro-step {
+        color: #6b7280;
+        width: 48px;
+        text-align: center;
+      }
+      .dendro-sim {
+        width: 200px;
+      }
+      .dendro-bar-wrap {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
       .dendro-bar {
         height: 10px;
         background: linear-gradient(90deg, #7c3aed, #c4b5fd);
@@ -607,8 +672,12 @@
         fill: #334155;
         font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
       }
-      .dendro-leaf-label { font-size: 0.78rem; }
-      .dendro-axis-label { font-size: 0.72rem; }
+      .dendro-leaf-label {
+        font-size: 0.78rem;
+      }
+      .dendro-axis-label {
+        font-size: 0.72rem;
+      }
       .dendro-dist-label {
         font-size: 0.72rem;
         font-weight: 700;
@@ -684,8 +753,12 @@
         color: var(--ink);
       }
 
-      .pairs-table tbody tr:hover td { background: var(--blue-light); }
-      .pairs-table tbody tr:last-child td { border-bottom: none; }
+      .pairs-table tbody tr:hover td {
+        background: var(--blue-light);
+      }
+      .pairs-table tbody tr:last-child td {
+        border-bottom: none;
+      }
 
       .sim-bar-wrap {
         display: flex;
@@ -705,7 +778,12 @@
       .sim-bar-fill {
         height: 100%;
         border-radius: 3px;
-        background: linear-gradient(90deg, var(--red), var(--orange), var(--green));
+        background: linear-gradient(
+          90deg,
+          var(--red),
+          var(--orange),
+          var(--green)
+        );
       }
 
       .sim-val {
@@ -735,7 +813,9 @@
         transition: background 0.15s;
       }
 
-      .btn-outline-danger:hover { background: #fef2f2; }
+      .btn-outline-danger:hover {
+        background: #fef2f2;
+      }
 
       /* ── Back link ───────────────────────────── */
       .back-link {
@@ -750,13 +830,15 @@
         transition: color 0.15s;
       }
 
-      .back-link:hover { color: var(--blue-dark); }
+      .back-link:hover {
+        color: var(--blue-dark);
+      }
 
       /* ── Loading overlay ─────────────────────── */
       #global-loading {
         position: fixed;
         inset: 0;
-        background: rgba(255,255,255,0.7);
+        background: rgba(255, 255, 255, 0.7);
         display: none;
         align-items: center;
         justify-content: center;
@@ -886,7 +968,7 @@
       .picker-search:focus {
         outline: none;
         border-color: var(--blue);
-        box-shadow: 0 0 0 3px rgba(0,158,219,0.1);
+        box-shadow: 0 0 0 3px rgba(0, 158, 219, 0.1);
       }
 
       .picker-count {
@@ -921,9 +1003,13 @@
         user-select: none;
       }
 
-      .picker-item:hover { background: var(--blue-light); }
+      .picker-item:hover {
+        background: var(--blue-light);
+      }
 
-      .picker-item.checked { background: #eff6ff; }
+      .picker-item.checked {
+        background: #eff6ff;
+      }
 
       .picker-item input[type="checkbox"] {
         width: 15px;
@@ -933,7 +1019,9 @@
         cursor: pointer;
       }
 
-      .picker-item.hidden { display: none; }
+      .picker-item.hidden {
+        display: none;
+      }
 
       /* ── Action row ──────────────────────────── */
       .matrix-actions-row {
@@ -989,7 +1077,7 @@
 
       .scatter-tooltip {
         position: absolute;
-        background: rgba(15,23,42,0.88);
+        background: rgba(15, 23, 42, 0.88);
         color: #fff;
         font-size: 0.8rem;
         padding: 5px 10px;
@@ -1039,17 +1127,25 @@
         border-radius: var(--radius-sm);
         background: var(--white);
         margin-bottom: 8px;
-        transition: border-color 0.15s, box-shadow 0.15s;
+        transition:
+          border-color 0.15s,
+          box-shadow 0.15s;
       }
 
-      .saved-card:hover { border-color: var(--blue); box-shadow: var(--shadow-sm); }
+      .saved-card:hover {
+        border-color: var(--blue);
+        box-shadow: var(--shadow-sm);
+      }
 
       .saved-card-active {
         border-color: var(--blue);
         background: var(--blue-light);
       }
 
-      .saved-card-main { flex: 1; min-width: 0; }
+      .saved-card-main {
+        flex: 1;
+        min-width: 0;
+      }
 
       .saved-card-title {
         font-size: 0.92rem;
@@ -1128,7 +1224,7 @@
           <button class="nav-btn" onclick="openTab('explore', this)">
             Explore
           </button>
-          <a href="index.html" class="nav-btn" style="text-decoration:none">
+          <a href="index.html" class="nav-btn" style="text-decoration: none">
             🔗 Compare
           </a>
         </div>
@@ -1141,19 +1237,38 @@
       <div class="hero-bg-pattern"></div>
       <div class="hero-split">
         <div class="hero-inner">
-          <div class="hero-eyebrow">Wikipedia Semi-Structured Data · Project 2</div>
+          <div class="hero-eyebrow">
+            Wikipedia Semi-Structured Data · Project 2
+          </div>
           <h1 class="hero-title">Country<br /><em>Clustering Tool</em></h1>
           <p class="hero-desc">
-            Group similar countries using K-Means and Agglomerative Hierarchical
-            Clustering on Tree Edit Distance similarity scores computed from Wikipedia infoboxes.
+            Group similar countries using K-Medoids and Agglomerative
+            Hierarchical Clustering on Tree Edit Distance similarity scores
+            computed from Wikipedia infoboxes.
           </p>
           <div class="hero-actions">
-            <button class="btn btn-hero-primary"
-                    onclick="openTab('matrix', document.querySelectorAll('.nav-btn')[0])">
+            <button
+              class="btn btn-hero-primary"
+              onclick="
+                openTab('matrix', document.querySelectorAll('.nav-btn')[0])
+              "
+            >
               Build Similarity Matrix →
             </button>
-            <a href="index.html" class="btn-hero-primary"
-               style="background:rgba(255,255,255,0.18);color:#fff;border:1px solid rgba(255,255,255,0.4);text-decoration:none;padding:13px 24px;border-radius:12px;font-size:0.95rem;font-weight:600;">
+            <a
+              href="index.html"
+              class="btn-hero-primary"
+              style="
+                background: rgba(255, 255, 255, 0.18);
+                color: #fff;
+                border: 1px solid rgba(255, 255, 255, 0.4);
+                text-decoration: none;
+                padding: 13px 24px;
+                border-radius: 12px;
+                font-size: 0.95rem;
+                font-weight: 600;
+              "
+            >
               ← Project 1
             </a>
           </div>
@@ -1186,12 +1301,14 @@
 
     <!-- ═══════════════ MAIN ═══════════════ -->
     <main class="main-content">
-
       <!-- ─── TAB: Similarity Matrix ─────────────────── -->
       <div id="tab-matrix" class="tab-content active">
         <div class="page-header">
           <h2>Similarity Matrix</h2>
-          <p>Build and manage pairwise TED similarity scores. Select a matrix in the Run Clustering tab.</p>
+          <p>
+            Build and manage pairwise TED similarity scores. Select a matrix in
+            the Run Clustering tab.
+          </p>
         </div>
 
         <!-- Build status -->
@@ -1201,10 +1318,18 @@
             <h3>Build a New Matrix</h3>
           </div>
 
-          <div id="matrix-status-bar" class="matrix-status-bar matrix-status-unknown">
+          <div
+            id="matrix-status-bar"
+            class="matrix-status-bar matrix-status-unknown"
+          >
             <span class="status-icon">⏳</span>
             <span class="status-text">No active build.</span>
-            <button class="btn btn-secondary btn-sm" onclick="refreshBuildStatus()">↺ Refresh</button>
+            <button
+              class="btn btn-secondary btn-sm"
+              onclick="refreshBuildStatus()"
+            >
+              ↺ Refresh
+            </button>
           </div>
 
           <div class="build-progress" id="build-progress">
@@ -1213,58 +1338,132 @@
               <span class="build-progress-pair" id="build-progress-pair"></span>
             </div>
             <div class="progress-bar">
-              <div id="build-progress-fill" class="progress-fill" style="width:0%"></div>
+              <div
+                id="build-progress-fill"
+                class="progress-fill"
+                style="width: 0%"
+              ></div>
             </div>
           </div>
 
           <!-- Name input -->
-          <div class="param-item" style="max-width:380px;margin-bottom:16px">
-            <label for="matrix-name-input">Label for this matrix (optional)</label>
-            <input type="text" id="matrix-name-input" placeholder="e.g. Middle East 2026"
-                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem" />
+          <div class="param-item" style="max-width: 380px; margin-bottom: 16px">
+            <label for="matrix-name-input"
+              >Label for this matrix (optional)</label
+            >
+            <input
+              type="text"
+              id="matrix-name-input"
+              placeholder="e.g. Middle East 2026"
+              style="
+                width: 100%;
+                padding: 8px 10px;
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-sm);
+                font-family: inherit;
+                font-size: 0.9rem;
+              "
+            />
           </div>
 
           <!-- Presets + picker -->
           <div class="estimate-banner" id="estimate-banner">
             <span id="estimate-icon">📊</span>
-            <span id="estimate-text">Select countries below to see time estimate.</span>
+            <span id="estimate-text"
+              >Select countries below to see time estimate.</span
+            >
           </div>
 
           <div class="preset-row">
             <span class="preset-label">Quick select:</span>
-            <button class="preset-btn" onclick="applyPreset('middle-east')">Middle East</button>
-            <button class="preset-btn" onclick="applyPreset('europe')">Europe</button>
-            <button class="preset-btn" onclick="applyPreset('asia')">Asia</button>
-            <button class="preset-btn" onclick="applyPreset('americas')">Americas</button>
-            <button class="preset-btn" onclick="applyPreset('africa')">Africa</button>
-            <button class="preset-btn preset-btn-warning" onclick="applyPreset('all')">All (slow ⚠️)</button>
-            <button class="preset-btn preset-btn-danger" onclick="applyPreset('none')">Clear</button>
+            <button class="preset-btn" onclick="applyPreset('middle-east')">
+              Middle East
+            </button>
+            <button class="preset-btn" onclick="applyPreset('europe')">
+              Europe
+            </button>
+            <button class="preset-btn" onclick="applyPreset('asia')">
+              Asia
+            </button>
+            <button class="preset-btn" onclick="applyPreset('americas')">
+              Americas
+            </button>
+            <button class="preset-btn" onclick="applyPreset('africa')">
+              Africa
+            </button>
+            <button
+              class="preset-btn preset-btn-warning"
+              onclick="applyPreset('all')"
+            >
+              All (slow ⚠️)
+            </button>
+            <button
+              class="preset-btn preset-btn-danger"
+              onclick="applyPreset('none')"
+            >
+              Clear
+            </button>
           </div>
 
           <div class="picker-wrap">
             <div class="picker-search-row">
-              <input type="text" id="country-search" placeholder="🔍  Search countries…"
-                     oninput="filterPickerList()" class="picker-search" />
+              <input
+                type="text"
+                id="country-search"
+                placeholder="🔍  Search countries…"
+                oninput="filterPickerList()"
+                class="picker-search"
+              />
               <span class="picker-count" id="picker-count">0 selected</span>
             </div>
             <div class="picker-list" id="picker-list"></div>
           </div>
 
           <div class="matrix-actions-row">
-            <button class="btn btn-primary" onclick="buildMatrix(false)">⚡ Build New Matrix</button>
-            <button class="btn btn-secondary" onclick="buildMatrixIncremental()">＋ Extend Selected Matrix</button>
+            <button class="btn btn-primary" onclick="buildMatrix(false)">
+              ⚡ Build New Matrix
+            </button>
+            <button
+              class="btn btn-secondary"
+              onclick="buildMatrixIncremental()"
+            >
+              ＋ Extend Selected Matrix
+            </button>
           </div>
         </div>
 
         <!-- Top similar pairs -->
-        <div class="cluster-section" id="top-pairs-section" style="display:none">
+        <div
+          class="cluster-section"
+          id="top-pairs-section"
+          style="display: none"
+        >
           <div class="cluster-section-header">
             <span class="step-badge">Preview</span>
             <h3>Most Similar Country Pairs</h3>
-            <div style="margin-left:auto;display:flex;align-items:center;gap:8px">
-              <label style="font-size:0.83rem;color:var(--ink-soft)">Show top</label>
-              <select id="top-pairs-limit" onchange="loadTopPairs()"
-                      style="padding:4px 8px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.83rem;background:var(--surface)">
+            <div
+              style="
+                margin-left: auto;
+                display: flex;
+                align-items: center;
+                gap: 8px;
+              "
+            >
+              <label style="font-size: 0.83rem; color: var(--ink-soft)"
+                >Show top</label
+              >
+              <select
+                id="top-pairs-limit"
+                onchange="loadTopPairs()"
+                style="
+                  padding: 4px 8px;
+                  border: 1.5px solid var(--border);
+                  border-radius: var(--radius-sm);
+                  font-family: inherit;
+                  font-size: 0.83rem;
+                  background: var(--surface);
+                "
+              >
                 <option value="10">10</option>
                 <option value="20">20</option>
                 <option value="50">50</option>
@@ -1279,7 +1478,10 @@
       <div id="tab-cluster" class="tab-content">
         <div class="page-header">
           <h2>Run Clustering</h2>
-          <p>Select a similarity matrix, choose an algorithm, tune parameters, and cluster.</p>
+          <p>
+            Select a similarity matrix, choose an algorithm, tune parameters,
+            and cluster.
+          </p>
         </div>
 
         <!-- Saved matrices list — select which one to cluster on -->
@@ -1287,8 +1489,13 @@
           <div class="cluster-section-header">
             <span class="step-badge">Step 1</span>
             <h3>Select a Similarity Matrix</h3>
-            <button class="btn btn-secondary btn-sm" style="margin-left:auto"
-                    onclick="loadMatrixList()">↺ Refresh</button>
+            <button
+              class="btn btn-secondary btn-sm"
+              style="margin-left: auto"
+              onclick="loadMatrixList()"
+            >
+              ↺ Refresh
+            </button>
           </div>
           <div id="matrix-list-container">
             <p class="saved-empty">Loading…</p>
@@ -1303,13 +1510,23 @@
           </div>
 
           <div class="algo-tabs">
-            <button class="algo-tab-btn active" id="tab-btn-kmeans"
-                    onclick="switchAlgo('kmeans')">K-Means</button>
-            <button class="algo-tab-btn" id="tab-btn-agglomerative"
-                    onclick="switchAlgo('agglomerative')">Agglomerative Hierarchical Clustering</button>
+            <button
+              class="algo-tab-btn active"
+              id="tab-btn-kmeans"
+              onclick="switchAlgo('kmeans')"
+            >
+              K-Medoids
+            </button>
+            <button
+              class="algo-tab-btn"
+              id="tab-btn-agglomerative"
+              onclick="switchAlgo('agglomerative')"
+            >
+              Agglomerative Hierarchical Clustering
+            </button>
           </div>
 
-          <!-- K-Means -->
+          <!-- K-Medoids -->
           <div id="params-kmeans">
             <div class="param-grid">
               <div class="param-item">
@@ -1319,25 +1536,47 @@
               </div>
               <div class="param-item">
                 <label for="km-max-iter">Max iterations</label>
-                <input type="number" id="km-max-iter" value="100" min="10" max="1000" />
+                <input
+                  type="number"
+                  id="km-max-iter"
+                  value="100"
+                  min="10"
+                  max="1000"
+                />
               </div>
               <div class="param-item">
                 <label for="km-n-init">Random restarts</label>
-                <input type="number" id="km-n-init" value="10" min="1" max="50" />
+                <input
+                  type="number"
+                  id="km-n-init"
+                  value="10"
+                  min="1"
+                  max="50"
+                />
                 <span class="field-hint">More = more stable result</span>
               </div>
             </div>
           </div>
 
-          <div id="params-agglomerative" style="display:none">
+          <div id="params-agglomerative" style="display: none">
             <div class="algo-description">
-              <strong>Agglomerative Hierarchical Clustering</strong> starts with each country as its own cluster and repeatedly merges the closest clusters using the selected linkage rule.
+              <strong>Agglomerative Hierarchical Clustering</strong> starts with
+              each country as its own cluster and repeatedly merges the closest
+              clusters using the selected linkage rule.
             </div>
             <div class="param-grid">
               <div class="param-item">
                 <label for="agg-n-clusters">Clusters</label>
-                <input type="number" id="agg-n-clusters" value="3" min="2" max="50" />
-                <span class="field-hint">Cut the hierarchy at this number of groups</span>
+                <input
+                  type="number"
+                  id="agg-n-clusters"
+                  value="3"
+                  min="2"
+                  max="50"
+                />
+                <span class="field-hint"
+                  >Cut the hierarchy at this number of groups</span
+                >
               </div>
               <div class="param-item">
                 <label for="agg-linkage">Linkage</label>
@@ -1346,20 +1585,39 @@
                   <option value="single">Single linkage</option>
                   <option value="complete">Complete linkage</option>
                 </select>
-                <span class="field-hint">How distance between two clusters is computed</span>
+                <span class="field-hint"
+                  >How distance between two clusters is computed</span
+                >
               </div>
             </div>
           </div>
 
-          <button class="btn btn-primary btn-run" id="run-btn" onclick="runClustering()">
+          <button
+            class="btn btn-primary btn-run"
+            id="run-btn"
+            onclick="runClustering()"
+          >
             ▶ Run Clustering
           </button>
 
           <!-- Result label -->
-          <div class="param-item" style="max-width:380px;margin-top:12px">
-            <label for="result-name-input">Label for this result (optional)</label>
-            <input type="text" id="result-name-input" placeholder="e.g. K-Means k=3 Middle East"
-                   style="width:100%;padding:8px 10px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-family:inherit;font-size:0.9rem" />
+          <div class="param-item" style="max-width: 380px; margin-top: 12px">
+            <label for="result-name-input"
+              >Label for this result (optional)</label
+            >
+            <input
+              type="text"
+              id="result-name-input"
+              placeholder="e.g. K-Medoids k=3 Middle East"
+              style="
+                width: 100%;
+                padding: 8px 10px;
+                border: 1.5px solid var(--border);
+                border-radius: var(--radius-sm);
+                font-family: inherit;
+                font-size: 0.9rem;
+              "
+            />
           </div>
         </div>
       </div>
@@ -1368,10 +1626,13 @@
       <div id="tab-results" class="tab-content">
         <div class="page-header">
           <h2>Cluster Results</h2>
-          <p>View and compare clustering outputs from K-Means and Agglomerative Hierarchical Clustering.</p>
+          <p>
+            View and compare clustering outputs from K-Medoids and Agglomerative
+            Hierarchical Clustering.
+          </p>
         </div>
 
-        <div class="cluster-section" id="results-main" style="display:none">
+        <div class="cluster-section" id="results-main" style="display: none">
           <div class="cluster-section-header">
             <span class="step-badge" id="results-algo-badge">Results</span>
             <h3 id="results-title">Cluster Output</h3>
@@ -1383,12 +1644,48 @@
 
           <!-- View toggle -->
           <div class="view-toggle">
-            <button class="view-btn active" id="vbtn-cards"   onclick="switchView('cards')">🗂 Cards</button>
-            <button class="view-btn" id="vbtn-table"          onclick="switchView('table')">📋 Table</button>
-            <button class="view-btn" id="vbtn-heatmap"        onclick="switchView('heatmap')">🌡 Heatmap</button>
-            <button class="view-btn" id="vbtn-scatter"        onclick="switchView('scatter')">🔵 Scatter Plot</button>
-            <button class="view-btn" id="vbtn-dendrogram"    onclick="switchView('dendrogram')">🌳 Dendrogram</button>
-            <button class="view-btn" id="vbtn-history"       onclick="switchView('history')">📜 Merge History</button>
+            <button
+              class="view-btn active"
+              id="vbtn-cards"
+              onclick="switchView('cards')"
+            >
+              🗂 Cards
+            </button>
+            <button
+              class="view-btn"
+              id="vbtn-table"
+              onclick="switchView('table')"
+            >
+              📋 Table
+            </button>
+            <button
+              class="view-btn"
+              id="vbtn-heatmap"
+              onclick="switchView('heatmap')"
+            >
+              🌡 Heatmap
+            </button>
+            <button
+              class="view-btn"
+              id="vbtn-scatter"
+              onclick="switchView('scatter')"
+            >
+              🔵 Scatter Plot
+            </button>
+            <button
+              class="view-btn"
+              id="vbtn-dendrogram"
+              onclick="switchView('dendrogram')"
+            >
+              🌳 Dendrogram
+            </button>
+            <button
+              class="view-btn"
+              id="vbtn-history"
+              onclick="switchView('history')"
+            >
+              📜 Merge History
+            </button>
           </div>
 
           <!-- Cards -->
@@ -1397,7 +1694,7 @@
           </div>
 
           <!-- Table -->
-          <div id="view-table" class="result-view" style="display:none">
+          <div id="view-table" class="result-view" style="display: none">
             <div class="cluster-table-wrap">
               <table class="cluster-table">
                 <thead>
@@ -1414,7 +1711,7 @@
           </div>
 
           <!-- Heatmap -->
-          <div id="view-heatmap" class="result-view" style="display:none">
+          <div id="view-heatmap" class="result-view" style="display: none">
             <div class="heatmap-controls">
               <label>Show:</label>
               <select id="heatmap-limit" onchange="renderHeatmap()">
@@ -1423,7 +1720,7 @@
                 <option value="50">First 50</option>
                 <option value="0">All</option>
               </select>
-              <label style="margin-left:10px">Sort:</label>
+              <label style="margin-left: 10px">Sort:</label>
               <select id="heatmap-sort" onchange="renderHeatmap()">
                 <option value="cluster">By cluster</option>
                 <option value="alpha">Alphabetical</option>
@@ -1434,22 +1731,22 @@
               <span>Low</span>
               <div class="heatmap-gradient-bar"></div>
               <span>High</span>
-              <span style="margin-left:8px;font-weight:600">Similarity</span>
+              <span style="margin-left: 8px; font-weight: 600">Similarity</span>
             </div>
           </div>
 
           <!-- Dendrogram graph -->
-          <div id="view-dendrogram" class="result-view" style="display:none">
+          <div id="view-dendrogram" class="result-view" style="display: none">
             <div id="dendrogram-body"></div>
           </div>
 
           <!-- Merge history table -->
-          <div id="view-history" class="result-view" style="display:none">
+          <div id="view-history" class="result-view" style="display: none">
             <div id="history-body"></div>
           </div>
 
           <!-- Scatter Plot (MDS projection) -->
-          <div id="view-scatter" class="result-view" style="display:none">
+          <div id="view-scatter" class="result-view" style="display: none">
             <div class="scatter-toolbar">
               <label class="scatter-toolbar-label">Labels:</label>
               <select id="scatter-labels" onchange="renderScatter()">
@@ -1457,11 +1754,25 @@
                 <option value="always">Always show</option>
                 <option value="reps">Medoids only</option>
               </select>
-              <label class="scatter-toolbar-label" style="margin-left:16px">Dot size:</label>
-              <input type="range" id="scatter-dot-size" min="4" max="18" value="9"
-                     oninput="renderScatter()" style="width:80px;accent-color:var(--blue)" />
-              <button class="btn btn-secondary btn-sm" style="margin-left:auto"
-                      onclick="downloadScatter()">⬇ Download PNG</button>
+              <label class="scatter-toolbar-label" style="margin-left: 16px"
+                >Dot size:</label
+              >
+              <input
+                type="range"
+                id="scatter-dot-size"
+                min="4"
+                max="18"
+                value="9"
+                oninput="renderScatter()"
+                style="width: 80px; accent-color: var(--blue)"
+              />
+              <button
+                class="btn btn-secondary btn-sm"
+                style="margin-left: auto"
+                onclick="downloadScatter()"
+              >
+                ⬇ Download PNG
+              </button>
             </div>
             <div class="scatter-wrap">
               <canvas id="scatter-canvas"></canvas>
@@ -1470,15 +1781,20 @@
             <div class="scatter-legend" id="scatter-legend"></div>
             <p class="scatter-note">
               2D projection via Classical MDS on the TED distance matrix.
-              <strong>+</strong> marks the cluster medoid (most central country).
+              <strong>+</strong> marks the visual center of each cluster.
+              Highlighted countries are the cluster representatives/medoids.
             </p>
           </div>
 
           <!-- Load saved (now via the Run Clustering tab list) -->
           <div class="saved-panel">
             <span class="saved-panel-label">Load a different result:</span>
-            <button class="btn btn-sm btn-secondary"
-                    onclick="openTab('cluster', document.querySelectorAll('.nav-btn')[1])">
+            <button
+              class="btn btn-sm btn-secondary"
+              onclick="
+                openTab('cluster', document.querySelectorAll('.nav-btn')[1])
+              "
+            >
               ← Go to Saved Results
             </button>
           </div>
@@ -1489,8 +1805,13 @@
           <div class="cluster-section-header">
             <span class="step-badge">Saved</span>
             <h3>Your Cluster Results</h3>
-            <button class="btn btn-secondary btn-sm" style="margin-left:auto"
-                    onclick="loadResultsList()">↺ Refresh</button>
+            <button
+              class="btn btn-secondary btn-sm"
+              style="margin-left: auto"
+              onclick="loadResultsList()"
+            >
+              ↺ Refresh
+            </button>
           </div>
           <div id="results-list-container">
             <p class="saved-empty">Loading…</p>
@@ -1499,11 +1820,24 @@
 
         <!-- Placeholder when no result is currently displayed -->
         <div class="cluster-section" id="results-placeholder">
-          <div style="text-align:center;padding:40px 20px;color:var(--ink-soft)">
-            <div style="font-size:2.5rem;margin-bottom:12px">📊</div>
-            <p style="font-size:1rem">Select a result above, or run a new algorithm.</p>
-            <button class="btn btn-primary" style="margin-top:16px"
-                    onclick="openTab('cluster', document.querySelectorAll('.nav-btn')[1])">
+          <div
+            style="
+              text-align: center;
+              padding: 40px 20px;
+              color: var(--ink-soft);
+            "
+          >
+            <div style="font-size: 2.5rem; margin-bottom: 12px">📊</div>
+            <p style="font-size: 1rem">
+              Select a result above, or run a new algorithm.
+            </p>
+            <button
+              class="btn btn-primary"
+              style="margin-top: 16px"
+              onclick="
+                openTab('cluster', document.querySelectorAll('.nav-btn')[1])
+              "
+            >
               Go to Run Clustering →
             </button>
           </div>
@@ -1514,7 +1848,10 @@
       <div id="tab-explore" class="tab-content">
         <div class="page-header">
           <h2>Explore Similarity</h2>
-          <p>Look up the most similar countries to any specific country in the database.</p>
+          <p>
+            Look up the most similar countries to any specific country in the
+            database.
+          </p>
         </div>
 
         <div class="cluster-section">
@@ -1523,27 +1860,46 @@
             <h3>Country Neighbours</h3>
           </div>
           <div class="compare-form">
-            <div class="form-group" style="flex:1;min-width:200px">
+            <div class="form-group" style="flex: 1; min-width: 200px">
               <label>Select country</label>
               <select id="explore-country-select">
                 <option value="">-- Select Country --</option>
               </select>
             </div>
-            <div class="form-group" style="flex:0;min-width:140px">
+            <div class="form-group" style="flex: 0; min-width: 140px">
               <label>Top N</label>
-              <input type="number" id="explore-top-n" value="5" min="1" max="50"
-                     style="width:100%;padding:9px 12px;border:1.5px solid var(--border);border-radius:var(--radius-sm);font-size:0.9rem;font-family:inherit" />
+              <input
+                type="number"
+                id="explore-top-n"
+                value="5"
+                min="1"
+                max="50"
+                style="
+                  width: 100%;
+                  padding: 9px 12px;
+                  border: 1.5px solid var(--border);
+                  border-radius: var(--radius-sm);
+                  font-size: 0.9rem;
+                  font-family: inherit;
+                "
+              />
             </div>
-            <div style="padding-bottom:20px">
-              <button class="btn btn-primary" onclick="lookupNeighbours()">Find Neighbours</button>
+            <div style="padding-bottom: 20px">
+              <button class="btn btn-primary" onclick="lookupNeighbours()">
+                Find Neighbours
+              </button>
             </div>
           </div>
-          <div id="neighbours-result" style="display:none">
+          <div id="neighbours-result" style="display: none">
             <div id="neighbours-container"></div>
           </div>
         </div>
 
-        <div class="cluster-section" id="top-pairs-explore-section" style="display:none">
+        <div
+          class="cluster-section"
+          id="top-pairs-explore-section"
+          style="display: none"
+        >
           <div class="cluster-section-header">
             <span class="step-badge">Global</span>
             <h3>Top Similar Pairs</h3>
@@ -1551,7 +1907,6 @@
           <div id="top-pairs-explore-container"></div>
         </div>
       </div>
-
     </main>
 
     <!-- ═══════════════ FOOTER ═══════════════ -->
@@ -1564,11 +1919,19 @@
         <div class="footer-links">
           <a href="index.html">← Back to Project 1</a>
           <span class="footer-sep">·</span>
-          <a href="https://en.wikipedia.org/wiki/Member_states_of_the_United_Nations" target="_blank">UN Member States</a>
+          <a
+            href="https://en.wikipedia.org/wiki/Member_states_of_the_United_Nations"
+            target="_blank"
+            >UN Member States</a
+          >
         </div>
         <div class="footer-copy">
-          © 2026 ClusterNations · COE 543/743 IDPA · Lebanese American University<br/>
-          <span class="footer-sub">Project #2 — Wikipedia Semi-Structured Infobox Document Clustering Tool</span>
+          © 2026 ClusterNations · COE 543/743 IDPA · Lebanese American
+          University<br />
+          <span class="footer-sub"
+            >Project #2 — Wikipedia Semi-Structured Infobox Document Clustering
+            Tool</span
+          >
         </div>
       </div>
     </footer>
