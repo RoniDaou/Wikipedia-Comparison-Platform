@@ -102,55 +102,344 @@ class SimilarityMatrixBuilder:
             and self._normalize_feature_name(selected_features[0]) == 'currency'
         )
 
-    def _extract_currency_codes(self, value) -> set:
+    # ══════════════════════════════════════════════════════════════════
+    #  Semantic field groups
+    #
+    #  Maps a concept name to all Wikipedia infobox field name variants.
+    #  When computing similarity, ALL fields in the same group are
+    #  collected and their values merged — field title is irrelevant,
+    #  only the VALUE inside matters.
+    #  e.g. Cuba ("Official language: Spanish") and Argentina
+    #       ("National language: Spanish") both produce {'spanish'} -> 1.0
+    # ══════════════════════════════════════════════════════════════════
+
+    FIELD_GROUPS: Dict[str, List[str]] = {
+        'language': [
+            'official language',
+            'official languages',
+            'official languages and national language',
+            'official languages and regional languages',
+            'national language',
+            'national languages',
+            'national language (official)',
+            'co-official languages',
+            'common language',
+            'common languages',
+            'language',
+            'languages',
+            'languages in official use',
+            'language spoken at home',
+            'recognised language',
+            'recognised languages',
+            'recognised national languages',
+            'recognised regional languages',
+            'recognized language',
+            'recognized languages',
+            'recognized national languages',
+            'recognized regional languages',
+            'regional languages',
+            'regional and minority languages',
+            'minority language',
+            'minority languages',
+            'indigenous languages',
+            'native languages',
+            'working language',
+            'working languages',
+            'official language (federal level)',
+            'official language and national language',
+            'government-sponsored languages',
+            'national sign language',
+            'spoken languages',
+            'vernacular language',
+            'vernacular languages',
+            'other languages',
+            'other common language',
+            'foreign languages',
+            'second language',
+            'significant language',
+        ],
+        'religion': [
+            'religion',
+            'religions',
+            'official religion',
+            'state religion',
+            'religious groups',
+            'religious group',
+        ],
+        'ethnic groups': [
+            'ethnic groups',
+            'ethnic group',
+            'ethnicity',
+            'ethnicities',
+            'nationality',
+            'nationalities',
+            'demographics',
+        ],
+        'currency': [
+            'currency',
+            'currencies',
+        ],
+        'government': [
+            'government',
+            'government type',
+            'type of government',
+            'governing body',
+            'political system',
+        ],
+    }
+
+    _FIELD_GROUP_LOOKUP: Dict[str, str] = {
+        variant.lower(): canonical
+        for canonical, variants in FIELD_GROUPS.items()
+        for variant in variants
+    }
+
+    def _canonical_group(self, field: str) -> Optional[str]:
+        """Return the canonical group name for a field, or None if ungrouped."""
+        norm = re.sub(r'\s*\([^)]*\)', '',
+                      str(field or '').lower()).strip()
+        if norm in self._FIELD_GROUP_LOOKUP:
+            return self._FIELD_GROUP_LOOKUP[norm]
+        for variant, canonical in self._FIELD_GROUP_LOOKUP.items():
+            if norm.startswith(variant) or variant.startswith(norm):
+                return canonical
+        return None
+
+    def _collect_group_values(self, fields: Dict,
+                              selected_field: str) -> Optional[str]:
         """
-        Extract ISO-style currency codes from a Wikipedia currency value.
-
-        Examples:
-          "Euro (€) (EUR)" -> {"EUR"}
-          "Swiss franc (CHF)" -> {"CHF"}
-          "Euro (EUR); CFP franc (XPF)" -> {"EUR", "XPF"}
-
-        This is important because currency is a categorical / multi-label
-        feature. TED/string similarity is not the right distance for it.
+        Collect and merge values from ALL fields that belong to the same
+        semantic group as selected_field. Field title is ignored — only
+        the value inside matters.
+        Falls back to exact field lookup for ungrouped fields.
         """
-        text = str(value or '')
-        return set(re.findall(r'\b[A-Z]{3}\b', text))
+        group = self._canonical_group(selected_field)
+        if group is not None:
+            merged = [str(v) for f, v in fields.items()
+                      if self._canonical_group(f) == group]
+            return '\n'.join(merged) if merged else None
+        return fields.get(selected_field)
 
-    def _currency_similarity(self, value_a, value_b) -> float:
+    # ── Item set extraction ─────────────────────────────────────────────
+
+    @staticmethod
+    def _extract_item_set(value: str) -> set:
         """
-        Jaccard similarity over extracted currency codes.
-
-        This makes countries that share a currency code close, regardless of
-        how long or messy the raw Wikipedia infobox text is.
+        Extract a normalized set of items from any multi-value infobox field.
+        Strips tree connectors, parenthetical qualifiers, lowercases everything.
         """
-        codes_a = self._extract_currency_codes(value_a)
-        codes_b = self._extract_currency_codes(value_b)
+        items = set()
+        for line in str(value or '').splitlines():
+            clean = re.sub(r'^[├└│─\s]+', '', line).strip()
+            clean = re.sub(r'\s*\([^)]*\)', '', clean).strip()
+            clean = re.sub(r'[,;:\-]+$', '', clean).strip().lower()
+            if len(clean) >= 2:
+                items.add(clean)
+        return items
 
-        if codes_a or codes_b:
-            union = codes_a | codes_b
-            if not union:
+    @staticmethod
+    def _jaccard_similarity(set_a: set, set_b: set) -> float:
+        """Jaccard: |A ∩ B| / |A ∪ B|. Returns 0.0 if both empty."""
+        union = set_a | set_b
+        return len(set_a & set_b) / len(union) if union else 0.0
+
+    # ── Currency ────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _extract_primary_iso_code(value) -> Optional[str]:
+        """Extract the primary ISO code from the first line of a currency field."""
+        first_line = ''
+        for line in str(value or '').splitlines():
+            s = line.strip()
+            if s:
+                first_line = s
+                break
+        codes = re.findall(r'\b[A-Z]{3}\b', first_line)
+        return codes[0] if codes else None
+
+    def _derive_shared_codes(self, country_names: List[str],
+                             selected_features: List[str]) -> Dict[str, set]:
+        """
+        Scan every country in the dataset and derive, for each selected
+        feature group, the set of VALUES that appear in 2+ countries.
+
+        These are the 'shared' values — used to implement the three-level
+        similarity gradient for both currency and language:
+
+          Both share a shared value  -> full Jaccard (or 1.0 if identical)
+          Both have only unique vals -> 0.5  (share the 'unique' property)
+          One shared, one unique     -> 0.0  (maximum separation)
+
+        Returns a dict: { canonical_group_name -> set_of_shared_values }
+        e.g. { 'language': {'english','arabic','french',...},
+               'currency': {'EUR','USD',...} }
+
+        Fully automatic — no hardcoded lists, works for any dataset.
+        """
+        if not selected_features:
+            return {}
+
+        # Group selected features by canonical group
+        groups_to_scan: set = set()
+        for field in selected_features:
+            g = self._canonical_group(field)
+            if g:
+                groups_to_scan.add(g)
+            elif self._normalize_feature_name(field) == 'currency':
+                groups_to_scan.add('currency')
+
+        if not groups_to_scan:
+            return {}
+
+        # Count value occurrences across all countries
+        value_counts: Dict[str, Dict[str, int]] = {g: {} for g in groups_to_scan}
+
+        for name in country_names:
+            doc = self.db.get_country(name)
+            if not doc:
+                continue
+            fields = doc.get('fields') or {}
+
+            for group in groups_to_scan:
+                # Find the selected field for this group
+                sel_field = next(
+                    (f for f in selected_features
+                     if self._canonical_group(f) == group or
+                     (group == 'currency' and
+                      self._normalize_feature_name(f) == 'currency')),
+                    None
+                )
+                if sel_field is None:
+                    continue
+
+                raw_value = self._collect_group_values(fields, sel_field)
+                if not raw_value:
+                    continue
+
+                if group == 'currency':
+                    code = self._extract_primary_iso_code(raw_value)
+                    if code:
+                        value_counts[group][code] = \
+                            value_counts[group].get(code, 0) + 1
+                else:
+                    for item in self._extract_item_set(raw_value):
+                        value_counts[group][item] = \
+                            value_counts[group].get(item, 0) + 1
+
+        # Keep only values that appear in 2+ countries
+        shared: Dict[str, set] = {}
+        for group, counts in value_counts.items():
+            shared[group] = {v for v, c in counts.items() if c >= 2}
+            print(f"[Matrix] Shared '{group}' values "
+                  f"(>=2 countries): {sorted(shared[group])[:10]}"
+                  f"{'...' if len(shared[group]) > 10 else ''}")
+
+        return shared
+
+    def _three_level_similarity(self, set_a: set, set_b: set,
+                                shared_values: set) -> float:
+        """
+        Three-level similarity for any categorical set-valued feature.
+
+        Level 1 — Both sets share at least one shared value:
+            Jaccard restricted to shared values, so unique minority values
+            don't dilute the similarity signal.
+            e.g. {'arabic','kurdish'} vs {'arabic'}: shared={'arabic'}
+                 -> Jaccard({'arabic'},{'arabic'}) = 1.0
+
+        Level 2 — No shared value overlap, but both have ONLY unique values:
+            Return 0.5. They share the 'unique language country' property —
+            more similar to each other than to shared-language countries.
+            e.g. {'japanese'} vs {'korean'}: both unique -> 0.5
+
+        Level 3 — One has a shared value the other lacks:
+            Return 0.0. Maximum separation.
+            e.g. {'arabic'} vs {'japanese'}: arabic is shared, japanese unique -> 0.0
+
+        This matches the same logic used for currency and solves the giant
+        Cluster 0 problem: unique-language countries now get 0.5 signal
+        against each other instead of 0.0.
+        """
+        if not set_a and not set_b:
+            return 0.0
+
+        shared_in_a = set_a & shared_values
+        shared_in_b = set_b & shared_values
+
+        # Level 1: both have shared values — compare on shared values only
+        if shared_in_a and shared_in_b:
+            return self._jaccard_similarity(shared_in_a, shared_in_b)
+
+        # Level 2: neither has any shared value — both are unique-language
+        if not shared_in_a and not shared_in_b:
+            return 0.5
+
+        # Level 3: one has a shared value, the other doesn't
+        return 0.0
+
+    def _feature_similarity(self, val_a: str, val_b: str,
+                            group: str,
+                            shared_by_group: Dict[str, set]) -> float:
+        """
+        Compute similarity for one feature, routing to the right method.
+
+        Currency  -> three-level on primary ISO code
+        Language / other -> three-level on item sets
+        """
+        shared = shared_by_group.get(group, set())
+
+        if group == 'currency':
+            code_a = self._extract_primary_iso_code(val_a)
+            code_b = self._extract_primary_iso_code(val_b)
+            if code_a is None or code_b is None:
                 return 0.0
-            return len(codes_a & codes_b) / len(union)
+            if code_a == code_b:
+                return 1.0
+            if code_a not in shared and code_b not in shared:
+                return 0.5
+            return 0.0
 
-        # Fallback for unusual pages with no ISO code in the field.
-        clean_a = re.sub(r'\s+', ' ', str(value_a or '').strip().lower())
-        clean_b = re.sub(r'\s+', ' ', str(value_b or '').strip().lower())
-        return 1.0 if clean_a and clean_a == clean_b else 0.0
+        set_a = self._extract_item_set(val_a)
+        set_b = self._extract_item_set(val_b)
+        return self._three_level_similarity(set_a, set_b, shared)
+
+    # ── Dispatcher ──────────────────────────────────────────────────────
 
     def _selected_feature_similarity(self, country_a: Dict, country_b: Dict,
-                                     selected_features: List[str]) -> Optional[float]:
+                                     selected_features: List[str],
+                                     shared_by_group: Dict[str, set] = None
+                                     ) -> Optional[float]:
         """
-        Return a special feature-level similarity when a selected feature needs
-        categorical handling. Return None to use the normal TED comparator.
+        Compute feature-level similarity by comparing VALUES, not field titles.
+
+        For each selected feature:
+          1. Find its canonical group
+          2. Collect ALL field values in that group from each country
+          3. Apply three-level similarity (shared/unique/cross)
+
+        Returns None only when no features are provided, falling back to TED.
         """
-        if not self._is_currency_only_matrix(selected_features):
+        if not selected_features:
             return None
 
-        field = selected_features[0]
         fields_a = country_a.get('fields', {}) or {}
         fields_b = country_b.get('fields', {}) or {}
-        return self._currency_similarity(fields_a.get(field), fields_b.get(field))
+        shared_by_group = shared_by_group or {}
+
+        scores = []
+        for field in selected_features:
+            val_a = self._collect_group_values(fields_a, field)
+            val_b = self._collect_group_values(fields_b, field)
+            if val_a is None or val_b is None:
+                continue
+
+            norm = self._normalize_feature_name(field)
+            group = self._canonical_group(field) or norm
+
+            scores.append(self._feature_similarity(
+                val_a, val_b, group, shared_by_group))
+
+        return sum(scores) / len(scores) if scores else None
 
     def _filter_country_fields(self, country_doc: Dict, selected_features: List[str]) -> Dict:
         """
@@ -208,9 +497,12 @@ class SimilarityMatrixBuilder:
         n = len(country_names)
         matrix = [[0.0] * n for _ in range(n)]
 
-        # Diagonal
         for i in range(n):
             matrix[i][i] = 1.0
+
+        # Derive shared values for all selected feature groups from the dataset.
+        # Empty dict when no features selected (full TED path).
+        shared_by_group = self._derive_shared_codes(country_names, selected_features)
 
         total_pairs = n * (n - 1) // 2
         done = 0
@@ -231,7 +523,7 @@ class SimilarityMatrixBuilder:
 
                     if data_i and data_j:
                         special_sim = self._selected_feature_similarity(
-                            data_i, data_j, selected_features
+                            data_i, data_j, selected_features, shared_by_group
                         )
                         if special_sim is not None:
                             sim = special_sim
