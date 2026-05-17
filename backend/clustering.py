@@ -498,7 +498,19 @@ class SimilarityMatrixBuilder:
         For each selected feature:
           1. Find its canonical group
           2. Collect ALL field values in that group from each country
-          3. Apply three-level similarity (shared/unique/cross)
+          3. Apply the appropriate similarity function for that group type
+
+        Aggregation strategy:
+          - Single feature              → return its score directly
+          - Multiple NUMERICAL features → return MIN of all scores
+            (e.g. density + per capita: a country pair must be close in BOTH
+            dimensions to be considered similar; averaging would mask cases
+            where one is similar and the other very different, e.g. Monaco
+            vs Bangladesh are both dense but have wildly different incomes)
+          - Multiple CATEGORICAL features → return MEAN of all scores
+            (language + religion: partial overlap in either dimension still
+            signals meaningful similarity)
+          - Mixed numerical + categorical → return MEAN (default)
 
         Returns None only when no features are provided, falling back to TED.
         """
@@ -510,19 +522,35 @@ class SimilarityMatrixBuilder:
         shared_by_group = shared_by_group or {}
 
         scores = []
+        groups = []
         for field in selected_features:
             val_a = self._collect_group_values(fields_a, field)
             val_b = self._collect_group_values(fields_b, field)
             if val_a is None or val_b is None:
                 continue
 
-            norm = self._normalize_feature_name(field)
+            norm  = self._normalize_feature_name(field)
             group = self._canonical_group(field) or norm
+            groups.append(group)
 
             scores.append(self._feature_similarity(
                 val_a, val_b, group, shared_by_group))
 
-        return sum(scores) / len(scores) if scores else None
+        if not scores:
+            return None
+
+        # Single feature → return directly
+        if len(scores) == 1:
+            return scores[0]
+
+        # Multiple features: choose aggregation based on feature types
+        all_numerical = all(g in self._NUMERICAL_GROUPS for g in groups)
+        if all_numerical:
+            # MIN: country pair must be close in ALL numerical dimensions
+            return min(scores)
+
+        # Default: mean (categorical or mixed)
+        return sum(scores) / len(scores)
 
     def _filter_country_fields(self, country_doc: Dict, selected_features: List[str]) -> Dict:
         """
