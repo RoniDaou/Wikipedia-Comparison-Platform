@@ -48,42 +48,132 @@ class AgglomerativeClustering:
     @staticmethod
     def _auto_cut(merge_history: List[Dict], n: int) -> int:
         """
-        Find the cut step using the biggest-gap heuristic.
+        Adaptive auto-cut based on the distance distribution of the merge history.
 
-        Finds the largest jump between consecutive merge distances and cuts
-        just before it — always at the FIRST occurrence of the maximum gap.
+        Empirically derived from 6 real similarity matrices covering:
+        currency, language, full TED, per-capita GDP, and density.
+        Four matrix types are detected and handled with targeted strategies.
 
-        For sparse/discrete matrices (e.g. currency with values {0.0, 0.5, 1.0}):
-          - Gaps appear at 0.0→0.5 (distance) and 0.5→1.0 (distance)
-          - Both gaps equal 0.5 — tied
-          - FIRST gap = 0.0→0.5 boundary = cut after all distance-0.0 merges
-          - In similarity terms: cut between similarity=1.0 and similarity=0.5
-          - Result: one cluster per shared-currency group (EUR, USD, XOF...)
-            + each unique-currency country as its own cluster
-          - This is the most informative cut: only merge countries that are
-            truly identical (same currency), keep everything else separate.
+        ── TYPE 1: SPARSE / DISCRETE ────────────────────────────────────────
+        Signature : <= 6 distinct distance values in the merge history.
+        Examples  : Currency  distances in {0.0, 0.5, 1.0}
+                    Language  distances in {0.0, 0.5, 0.667, 1.0}
+        Strategy  : LAST occurrence of the maximum gap.
+                    The merge history has a clear tier structure:
+                      • dist=0.0  →  identical (same currency / language family)
+                      • dist=0.5  →  both sovereign/unique
+                      • dist=1.0  →  incompatible groups (forced merge)
+                    Taking the LAST max gap lets all same-tier merges complete
+                    before cutting → EUR bloc, Romance languages, etc.
 
-        For continuous matrices (full TED, many unique distances):
-          - The first true gap is also the most meaningful structural break.
+        ── TYPE 2: NARROW CONTINUOUS ────────────────────────────────────────
+        Signature : > 6 distinct values  AND  dist_range < 0.20
+        Examples  : Full TED on a single region (Middle East TED: 0.16–0.21)
+                    All countries are structurally similar; no gap stands out.
+        Strategy  : Mean split — cut at the mean merge distance.
+                    Splits the dataset into two halves by similarity, separating
+                    sub-groups within an otherwise homogeneous set.
+
+        ── TYPE 3: MEDIUM CONTINUOUS ────────────────────────────────────────
+        Signature : > 6 distinct values  AND  0.20 <= dist_range < 0.30
+        Examples  : Density (Middle East actual merge range: 0.00–0.26)
+                    Clear structural break exists (dense vs sparse countries).
+        Strategy  : Last gap with z-score > 1.5, no k guard.
+                    The z-score threshold finds the dominant structural break.
+                    Fallback to mean split if no significant gap found.
+
+        ── TYPE 4: WIDE CONTINUOUS ──────────────────────────────────────────
+        Signature : > 6 distinct values  AND  dist_range >= 0.30
+        Examples  : Per-capita GDP (Americas: 0.005–0.367)
+                    Full TED on globally diverse datasets
+        Strategy  : Last gap with z-score > 1.5, with k >= 3 guard.
+                    Identifies the last major structural jump (e.g. Haiti as
+                    income outlier). If result is too coarse (k < 3), falls
+                    back to 65th-percentile split for more granular clusters.
 
         Special case: all gaps zero → sqrt(n) clusters fallback.
         """
+        import math, statistics
+
         if len(merge_history) < 2:
             return len(merge_history)
 
         distances = [m["distance"] for m in merge_history]
-        gaps = [distances[i + 1] - distances[i] for i in range(len(distances) - 1)]
-        max_gap = max(gaps)
+        gaps      = [distances[i + 1] - distances[i]
+                     for i in range(len(distances) - 1)]
+        max_gap   = max(gaps)
 
-        # All gaps zero → perfectly uniform → sqrt(n) fallback
+        # ── All gaps zero → perfectly uniform distances ───────────────────
         if max_gap < 1e-9:
-            import math
             return max(0, n - max(2, round(math.sqrt(n))))
 
-        # Always pick the FIRST occurrence of the maximum gap.
-        # For tied gaps (sparse matrix): this gives the earliest meaningful cut —
-        # between the identical-match tier and the partial-match tier.
-        return gaps.index(max_gap) + 1
+        n_merges      = len(merge_history)
+        distinct_vals = len(set(round(d, 4) for d in distances))
+        dist_range    = distances[-1] - distances[0]
+
+        # ── Helper: last z > 1.5 gap ──────────────────────────────────────
+        def _last_significant_gap():
+            if len(gaps) < 2:
+                return None
+            mean_g = statistics.mean(gaps)
+            std_g  = statistics.stdev(gaps)
+            if std_g == 0:
+                return None
+            sig = [i for i, g in enumerate(gaps)
+                   if (g - mean_g) / std_g > 1.5]
+            return sig[-1] if sig else None
+
+        # ── Helper: mean split ────────────────────────────────────────────
+        def _mean_split():
+            mean_d = statistics.mean(distances)
+            kept   = sum(1 for d in distances if d <= mean_d)
+            return max(1, min(kept, n_merges - 1))
+
+        # ── Helper: percentile split ──────────────────────────────────────
+        def _pct_split(pct=0.65):
+            idx  = int(pct * len(distances))
+            thr  = distances[min(idx, len(distances) - 1)]
+            kept = sum(1 for d in distances if d <= thr)
+            return max(1, min(kept, n_merges - 1))
+
+        # ── TYPE 1: SPARSE ────────────────────────────────────────────────
+        # Use the LAST gap that is >= 50% of the maximum gap.
+        # This handles multi-tier sparse matrices (e.g. language with gaps
+        # {0.5, 0.333, 0.167}): we want the last MAJOR gap (0.333 at the
+        # 0.667→1.0 boundary), not the last gap of any size.
+        # For binary/two-tier matrices (currency: gaps {0.5}), only one
+        # gap qualifies and it gives the correct last-tier boundary.
+        if distinct_vals <= 6:
+            threshold = max_gap * 0.5
+            sig_sparse = [(g, i) for i, g in enumerate(gaps)
+                          if g >= threshold]
+            if sig_sparse:
+                last_idx = max(sig_sparse, key=lambda x: x[1])[1]
+                return last_idx + 1
+            # Fallback: absolute last max gap
+            rev      = gaps[::-1]
+            last_idx = len(gaps) - 1 - rev.index(max_gap)
+            return last_idx + 1
+
+        # ── TYPE 2: NARROW CONTINUOUS ─────────────────────────────────────
+        if dist_range < 0.20:
+            return _mean_split()
+
+        # ── TYPE 3: MEDIUM CONTINUOUS ─────────────────────────────────────
+        if dist_range < 0.30:
+            sig_idx = _last_significant_gap()
+            if sig_idx is not None:
+                return sig_idx + 1
+            return _mean_split()
+
+        # ── TYPE 4: WIDE CONTINUOUS ───────────────────────────────────────
+        sig_idx = _last_significant_gap()
+        if sig_idx is not None:
+            cut = sig_idx + 1
+            if n - cut >= 3:
+                return cut
+        # k < 3 or no significant gap → 65th-percentile split
+        return _pct_split(0.65)
 
     def fit(self, countries: List[str], distance_matrix: List[List[float]],
             coords: List[List[float]] = None) -> Dict:

@@ -1332,7 +1332,6 @@ def recut_agglomerative():
             for name_c in member_names:
                 labels[name_c] = cidx
 
-        from agglomerative import AgglomerativeClustering
         result_out = dict(existing)
         result_out.pop('_id', None)
         result_out['n_clusters'] = n_clusters_actual
@@ -1342,8 +1341,20 @@ def recut_agglomerative():
         result_out['auto_cut']   = False
         result_out['recut_from'] = result_id
 
+        # Optional: save the recut result as a new DB entry
+        save = bool(data.get('save', False))
+        save_name = data.get('save_name', '').strip()
+        if save:
+            matrix_id = existing.get('matrix_id', '')
+            if not save_name:
+                save_name = (f"AGGLOMERATIVE — k={n_clusters_actual} "
+                             f"— {existing.get('n_countries', n)} countries (recut)")
+            inserted_id = db.save_cluster_result(
+                result_out, name=save_name, matrix_id=matrix_id)
+            result_out['_id'] = inserted_id
+
         return app.response_class(
-            response=json.dumps({'success': True, 'result': result_out},
+            response=json.dumps({'success': True, 'result': result_out, 'saved': save},
                                 cls=MongoJSONEncoder),
             status=200,
             mimetype='application/json'

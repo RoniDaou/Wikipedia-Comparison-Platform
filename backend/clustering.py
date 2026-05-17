@@ -186,6 +186,41 @@ class SimilarityMatrixBuilder:
             'governing body',
             'political system',
         ],
+        'density': [
+            'density',
+            'population density',
+            'pop density',
+            'pop. density',
+        ],
+        'area': [
+            'area',
+            'total area',
+            'land area',
+            'surface area',
+        ],
+        'population': [
+            'population',
+            'total population',
+            'pop',
+        ],
+        'gdp': [
+            'gdp',
+            'gdp (nominal)',
+            'gdp (ppp)',
+            'gross domestic product',
+            'gdp per capita',
+            'gdp (nominal) per capita',
+            'gdp (ppp) per capita',
+        ],
+        'per_capita': [
+            'per capita',
+            'gdp per capita',
+            'gdp (nominal) per capita',
+            'gdp (ppp) per capita',
+            'income per capita',
+            'gni per capita',
+            'gnp per capita',
+        ],
     }
 
     _FIELD_GROUP_LOOKUP: Dict[str, str] = {
@@ -242,6 +277,68 @@ class SimilarityMatrixBuilder:
         """Jaccard: |A ∩ B| / |A ∪ B|. Returns 0.0 if both empty."""
         union = set_a | set_b
         return len(set_a & set_b) / len(union) if union else 0.0
+
+    # ── Numerical fields (density, area, population, GDP) ──────────────
+
+    # Canonical groups that contain numerical data
+    _NUMERICAL_GROUPS = {'density', 'area', 'population', 'gdp', 'per_capita'}
+
+    @staticmethod
+    def _extract_numerical_value(value: str) -> Optional[float]:
+        """
+        Extract the primary numeric value from a Wikipedia infobox field.
+
+        Handles formats like:
+          "4.2/km2 (10.9/sq mi) (230th)"   → 4.2
+          "45/km2 (116.5/sq mi) (179th)"   → 45.0
+          "26,337/km2 (68,200/sq mi) (1st)"→ 26337.0
+          "9,596,960 km2 (3,705,407 sq mi)"→ 9596960.0
+          "$1.2 trillion"                   → 1.2  (+ unit handling)
+          "1,441,719,852"                   → 1441719852.0
+
+        Always extracts the FIRST number (before /km2, /km, or at start).
+        Strips commas before parsing.
+        """
+        text = str(value or '').strip()
+        # Priority: number immediately before /km2 or /km (density)
+        m = re.search(r'([\d,]+\.?\d*)\s*/\s*km', text)
+        if m:
+            return float(m.group(1).replace(',', ''))
+        # Dollar/currency prefix then number (GDP)
+        m = re.search(r'[\$£€¥]\s*([\d,]+\.?\d*)', text)
+        if m:
+            return float(m.group(1).replace(',', ''))
+        # First plain number in string
+        m = re.search(r'([\d,]+\.?\d*)', text)
+        if m:
+            return float(m.group(1).replace(',', ''))
+        return None
+
+    @staticmethod
+    def _numerical_similarity(val_a: str, val_b: str) -> float:
+        """
+        Log-ratio similarity between two numerical field values.
+
+        Uses log base-10 difference normalised over a 4-order-of-magnitude
+        range so that:
+          - identical values → 1.0
+          - 10x apart       → 0.75
+          - 100x apart      → 0.50
+          - 1000x apart     → 0.25
+          - 10000x+ apart   → 0.0
+
+        This handles the enormous range of real-world values
+        (e.g. density: Monaco 26,337/km² vs Mongolia 2/km²).
+        """
+        import math
+        a = SimilarityMatrixBuilder._extract_numerical_value(val_a)
+        b = SimilarityMatrixBuilder._extract_numerical_value(val_b)
+        if a is None or b is None or a <= 0 or b <= 0:
+            return 0.0
+        if a == b:
+            return 1.0
+        log_diff = abs(math.log10(a) - math.log10(b))
+        return max(0.0, 1.0 - log_diff / 4.0)
 
     # ── Currency ────────────────────────────────────────────────────────
 
@@ -380,6 +477,10 @@ class SimilarityMatrixBuilder:
             if code_a not in shared and code_b not in shared:
                 return 0.5                          # both sovereign/unique
             return 0.0                              # one shared, one not
+
+        # ── Numerical fields (density, area, population, GDP) ─────────
+        if group in self._NUMERICAL_GROUPS:
+            return self._numerical_similarity(val_a, val_b)
 
         set_a = self._extract_item_set(val_a)
         set_b = self._extract_item_set(val_b)

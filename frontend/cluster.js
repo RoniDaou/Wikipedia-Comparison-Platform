@@ -1334,8 +1334,9 @@ function initDendrogramCutLine(uid, result) {
   // Set initial position
   updateCutLine(currentDist);
 
-  // Apply Cut button — calls /api/cluster/recut with the current cut_step
+  // Apply Cut button
   const applyBtn = document.getElementById(uid + '_applycut');
+
   if (applyBtn) {
     applyBtn.addEventListener('click', async function() {
       const resultId = State.lastResult?._id;
@@ -1344,12 +1345,14 @@ function initDendrogramCutLine(uid, result) {
         return;
       }
 
-      // Convert current distance threshold → cut_step
-      // cut_step = number of merges with distance <= currentDist
       const newCutStep = history.filter(m => Number(m.distance) <= currentDist).length;
 
       applyBtn.disabled = true;
       applyBtn.textContent = '⏳ Applying…';
+
+      // Hide save banner while applying
+      const banner = document.getElementById('recut-save-banner');
+      if (banner) banner.style.display = 'none';
 
       try {
         const res = await fetch(`${API}/api/cluster/recut`, {
@@ -1358,19 +1361,75 @@ function initDendrogramCutLine(uid, result) {
           body: JSON.stringify({ result_id: resultId, cut_step: newCutStep })
         });
         const data = await res.json();
-        if (!data.success) {
-          alert('Recut failed: ' + data.error);
-          return;
-        }
-        // Update displayed result with the recut output
-        displayResult(data.result);
-        // Switch to cards view so user sees the new clusters
-        switchView('cards');
+        if (!data.success) { alert('Recut failed: ' + data.error); return; }
+
+        State.lastResult = data.result;
+        renderResult(data.result);
+
+        // Show the permanent save banner (in cluster.html) with stored cut info
+        showRecutSaveBanner(data.result, resultId, newCutStep);
       } catch (err) {
         alert('Recut error: ' + err.message);
       } finally {
         applyBtn.disabled = false;
         applyBtn.textContent = '✓ Apply Cut';
+      }
+    });
+  }
+}
+
+// ── Recut save banner (permanent element in cluster.html) ─────────────────
+function showRecutSaveBanner(recutResult, originalResultId, cutStep) {
+  const banner    = document.getElementById('recut-save-banner');
+  const saveBtn   = document.getElementById('recut-save-btn');
+  const dismissBtn= document.getElementById('recut-dismiss-btn');
+  const nameInput = document.getElementById('recut-save-name');
+  if (!banner) return;
+
+  // Clear previous name
+  if (nameInput) nameInput.value = '';
+
+  banner.style.display = 'flex';
+
+  // Dismiss
+  if (dismissBtn) {
+    dismissBtn.onclick = () => { banner.style.display = 'none'; };
+  }
+
+  // Save
+  if (saveBtn) {
+    // Remove old listener by cloning
+    const newSaveBtn = saveBtn.cloneNode(true);
+    saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
+
+    newSaveBtn.addEventListener('click', async function() {
+      const saveName = nameInput ? nameInput.value.trim() : '';
+      newSaveBtn.disabled = true;
+      newSaveBtn.textContent = '⏳ Saving…';
+
+      try {
+        const res = await fetch(`${API}/api/cluster/recut`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            result_id: originalResultId,
+            cut_step:  cutStep,
+            save:      true,
+            save_name: saveName
+          })
+        });
+        const data = await res.json();
+        if (!data.success) { alert('Save failed: ' + data.error); return; }
+
+        State.lastResult = data.result;
+        banner.style.display = 'none';
+        if (typeof loadResultsList === 'function') loadResultsList();
+        alert(`✓ Saved as "${saveName || 'recut result'}" in database.`);
+      } catch (err) {
+        alert('Save error: ' + err.message);
+      } finally {
+        newSaveBtn.disabled = false;
+        newSaveBtn.textContent = '💾 Save to Database';
       }
     });
   }
@@ -1717,6 +1776,7 @@ function buildDendrogramSvg(result, history) {
       <span id="${uid}_cutinfo" style="font-size:0.82rem;font-weight:600;color:#5b21b6;"></span>
       <button id="${uid}_applycut" style="margin-left:auto;padding:5px 14px;background:#5b21b6;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;">✓ Apply Cut</button>
     </div>
+
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
       <span style="font-size:0.8rem;font-weight:600;color:var(--ink-soft);">Zoom</span>
       <button id="${uid}_zoomin"  style="padding:4px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;font-size:0.85rem;font-weight:700;">＋</button>

@@ -1821,6 +1821,29 @@
             </div>
           </div>
 
+          <!-- Recut save banner — shown after Apply Cut, hidden otherwise -->
+          <div id="recut-save-banner" style="display:none;align-items:center;gap:10px;
+               padding:10px 16px;margin-bottom:12px;background:#f0fdf4;
+               border:1.5px solid #86efac;border-radius:8px;flex-wrap:wrap;">
+            <span style="font-size:0.88rem;color:#166534;font-weight:600;">
+              💾 Cut applied — save as a new result?
+            </span>
+            <input id="recut-save-name" type="text" placeholder="Optional name…"
+                   style="flex:1;min-width:180px;padding:5px 10px;border:1.5px solid #86efac;
+                          border-radius:6px;font-size:0.84rem;outline:none;"/>
+            <button id="recut-save-btn"
+                    style="padding:6px 16px;background:#16a34a;color:#fff;border:none;
+                           border-radius:6px;font-size:0.84rem;font-weight:600;cursor:pointer;">
+              💾 Save to Database
+            </button>
+            <button id="recut-dismiss-btn"
+                    style="padding:6px 12px;background:transparent;color:#6b7280;
+                           border:1.5px solid #d1d5db;border-radius:6px;
+                           font-size:0.84rem;cursor:pointer;">
+              Dismiss
+            </button>
+          </div>
+
           <!-- Dendrogram graph -->
           <div id="view-dendrogram" class="result-view" style="display: none">
             <div id="dendrogram-body"></div>
