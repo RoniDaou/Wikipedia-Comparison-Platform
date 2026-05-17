@@ -23,7 +23,13 @@ class AgglomerativeClustering:
     Workflow:
       1. Start with each country as its own cluster.
       2. Repeatedly merge the two closest clusters.
-      3. Stop once n_clusters clusters remain.
+      3. Always runs to completion (one root cluster) — cut is applied after.
+
+    Cut modes:
+      - auto (n_clusters=None): biggest-gap heuristic automatically selects
+        the cut point where the largest jump in merge distances occurs.
+        This is the parameter-free approach: the dendrogram decides.
+      - manual (n_clusters=int): cut at exactly that many clusters.
 
     Supported linkage modes:
       - average  : mean pairwise distance between cluster members
@@ -31,11 +37,53 @@ class AgglomerativeClustering:
       - complete : maximum pairwise distance
     """
 
-    def __init__(self, n_clusters: int = 3, linkage: str = "average"):
-        self.n_clusters = n_clusters
+    def __init__(self, n_clusters: int = None, linkage: str = "average"):
+        self.n_clusters = n_clusters  # None = auto biggest-gap
         self.linkage = (linkage or "average").lower()
         if self.linkage not in {"average", "single", "complete"}:
             raise ValueError('linkage must be "average", "single", or "complete"')
+
+    # ── Biggest-gap auto cut ────────────────────────────────────────────────
+
+    @staticmethod
+    def _auto_cut(merge_history: List[Dict], n: int) -> int:
+        """
+        Find the cut step using the biggest-gap heuristic.
+
+        Finds the largest jump between consecutive merge distances and cuts
+        just before it — always at the FIRST occurrence of the maximum gap.
+
+        For sparse/discrete matrices (e.g. currency with values {0.0, 0.5, 1.0}):
+          - Gaps appear at 0.0→0.5 (distance) and 0.5→1.0 (distance)
+          - Both gaps equal 0.5 — tied
+          - FIRST gap = 0.0→0.5 boundary = cut after all distance-0.0 merges
+          - In similarity terms: cut between similarity=1.0 and similarity=0.5
+          - Result: one cluster per shared-currency group (EUR, USD, XOF...)
+            + each unique-currency country as its own cluster
+          - This is the most informative cut: only merge countries that are
+            truly identical (same currency), keep everything else separate.
+
+        For continuous matrices (full TED, many unique distances):
+          - The first true gap is also the most meaningful structural break.
+
+        Special case: all gaps zero → sqrt(n) clusters fallback.
+        """
+        if len(merge_history) < 2:
+            return len(merge_history)
+
+        distances = [m["distance"] for m in merge_history]
+        gaps = [distances[i + 1] - distances[i] for i in range(len(distances) - 1)]
+        max_gap = max(gaps)
+
+        # All gaps zero → perfectly uniform → sqrt(n) fallback
+        if max_gap < 1e-9:
+            import math
+            return max(0, n - max(2, round(math.sqrt(n))))
+
+        # Always pick the FIRST occurrence of the maximum gap.
+        # For tied gaps (sparse matrix): this gives the earliest meaningful cut —
+        # between the identical-match tier and the partial-match tier.
+        return gaps.index(max_gap) + 1
 
     def fit(self, countries: List[str], distance_matrix: List[List[float]],
             coords: List[List[float]] = None) -> Dict:
@@ -50,20 +98,19 @@ class AgglomerativeClustering:
         n = len(countries)
         if n == 0:
             raise ValueError("Cannot cluster an empty country list.")
-        if self.n_clusters < 1:
-            raise ValueError("n_clusters must be >= 1")
-        if self.n_clusters > n:
-            raise ValueError(f"n_clusters={self.n_clusters} exceeds number of countries ({n}).")
+        if self.n_clusters is not None:
+            if self.n_clusters < 1:
+                raise ValueError("n_clusters must be >= 1")
+            if self.n_clusters > n:
+                raise ValueError(f"n_clusters={self.n_clusters} exceeds number of countries ({n}).")
 
         started = time.perf_counter()
         clusters = {i: [i] for i in range(n)}
         next_cluster_id = n
         merge_history = []
-        final_clusters_snapshot = None
-        cut_step = 0
 
-        # Build the full hierarchy down to one root cluster so the UI can show
-        # a dendrogram/merge table, but remember the requested cut at n_clusters.
+        # Always run to completion — agglomerative merges everything.
+        # The cut is decided after the full hierarchy is built.
         while len(clusters) > 1:
             best_pair = None
             best_distance = float("inf")
@@ -98,12 +145,30 @@ class AgglomerativeClustering:
             clusters[next_cluster_id] = merged_members
             next_cluster_id += 1
 
-            if len(clusters) == self.n_clusters and final_clusters_snapshot is None:
-                final_clusters_snapshot = [list(members) for members in clusters.values()]
-                cut_step = len(merge_history)
+        # ── Determine cut point ────────────────────────────────────────────
+        if self.n_clusters is None:
+            # Auto mode: biggest gap heuristic
+            cut_step = self._auto_cut(merge_history, n)
+            auto_cut = True
+        else:
+            # Manual mode: cut at exactly n_clusters
+            cut_step = n - self.n_clusters
+            auto_cut = False
 
-        final_clusters = final_clusters_snapshot or list(clusters.values())
+        # ── Replay merge history to recover clusters at cut point ──────────
+        # Re-simulate the merges up to cut_step to get the actual cluster sets.
+        replay_clusters = {i: [i] for i in range(n)}
+        replay_next_id = n
+        for merge in merge_history[:cut_step]:
+            a_id = int(merge["left"])
+            b_id = int(merge["right"])
+            merged = replay_clusters.pop(a_id, []) + replay_clusters.pop(b_id, [])
+            replay_clusters[replay_next_id] = merged
+            replay_next_id += 1
+
+        final_clusters = list(replay_clusters.values())
         final_clusters.sort(key=lambda members: (min(members), len(members)))
+        n_clusters_actual = len(final_clusters)
 
         labels = [0] * n
         for cluster_idx, members in enumerate(final_clusters):
@@ -118,6 +183,8 @@ class AgglomerativeClustering:
             distance_matrix=distance_matrix,
             merge_history=merge_history,
             cut_step=cut_step,
+            n_clusters_actual=n_clusters_actual,
+            auto_cut=auto_cut,
             runtime_ms=round((time.perf_counter() - started) * 1000, 3),
         )
 
@@ -146,7 +213,9 @@ class AgglomerativeClustering:
                      distance_matrix: List[List[float]],
                      merge_history: List[Dict],
                      cut_step: int,
-                     runtime_ms: float) -> Dict:
+                     runtime_ms: float,
+                     n_clusters_actual: int = None,
+                     auto_cut: bool = False) -> Dict:
         n = len(countries)
         if coords is None:
             coords = [[0.0, 0.0] for _ in range(n)]
@@ -169,9 +238,12 @@ class AgglomerativeClustering:
         cohesion = self._cohesion(n, labels, distance_matrix)
         silhouette = self._silhouette(n, labels, distance_matrix)
 
+        n_clusters_out = n_clusters_actual if n_clusters_actual is not None else (self.n_clusters or len(final_clusters))
         return {
             "algorithm": "agglomerative",
-            "n_clusters": self.n_clusters,
+            "n_clusters": n_clusters_out,
+            "n_clusters_requested": self.n_clusters,
+            "auto_cut": auto_cut,
             "linkage": self.linkage,
             "clusters": clusters,
             "labels": {countries[i]: labels[i] for i in range(n)},

@@ -927,6 +927,15 @@ function renderPairsTable(containerId, pairs) {
    CLUSTERING — Algorithm selection
 ══════════════════════════════════════════════════════════════════════════ */
 
+
+function toggleAutoCut() {
+  const auto = document.getElementById("agg-auto-cut")?.checked;
+  const wrap = document.getElementById("agg-n-clusters-wrap");
+  if (!wrap) return;
+  wrap.style.opacity = auto ? "0.4" : "1";
+  wrap.style.pointerEvents = auto ? "none" : "auto";
+}
+
 function switchAlgo(algo) {
   State.currentAlgo = algo;
 
@@ -1071,8 +1080,11 @@ async function runClustering() {
       parseInt(document.getElementById("km-max-iter").value) || 100;
     body.n_init = parseInt(document.getElementById("km-n-init").value) || 10;
   } else if (algo === "agglomerative") {
-    body.n_clusters =
-      parseInt(document.getElementById("agg-n-clusters").value) || 3;
+    const autoCut = document.getElementById("agg-auto-cut")?.checked;
+    body.auto_cut = !!autoCut;
+    if (!autoCut) {
+      body.n_clusters = parseInt(document.getElementById("agg-n-clusters").value) || 3;
+    }
     body.linkage = document.getElementById("agg-linkage").value || "average";
   }
 
@@ -1203,6 +1215,257 @@ function showAgglomerativeOnlyMessage(container, viewName) {
   container.innerHTML = `<p class="saved-empty">${viewName} is available only for Agglomerative Hierarchical Clustering results.</p>`;
 }
 
+// ── Draggable cut line on dendrogram ────────────────────────────────────────
+// Lets the user drag the cut line up/down to interactively choose n_clusters.
+// Recomputes cluster assignments live from merge_history without a server call.
+function initDendrogramCutLine(uid, result) {
+  const wrap       = document.getElementById(uid + '_wrap');
+  const svg        = document.getElementById(uid + '_svg');
+  const cutLineEl  = document.getElementById(uid + '_cutline');
+  const hitEl      = document.getElementById(uid + '_cutline_hit');
+  const cutLabelEl = document.getElementById(uid + '_cutlabel');
+  const cutInfoEl  = document.getElementById(uid + '_cutinfo');
+  if (!wrap || !svg || !cutLineEl) return;
+
+  const history = result.merge_history || result.dendrogram || [];
+  if (!history.length) return;
+
+  const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+  const svgH = vb[3];
+
+  // Must mirror layout constants from buildDendrogramSvg exactly
+  const margin = { top: 55, right: 70, bottom: 130, left: 80 };
+  const baselineY  = svgH - margin.bottom;
+  const plotHeight = baselineY - margin.top;
+  const maxDist    = Math.max(...history.map(m => Number(m.distance) || 0), 1e-9);
+
+  // yScale (same formula as buildDendrogramSvg):
+  //   dist=0       → y = baselineY       (bottom, similarity=1.0)
+  //   dist=maxDist → y = baselineY - plotHeight*0.95  (top, low similarity)
+  function distanceToSvgY(dist) {
+    return baselineY - ((Number(dist) || 0) / maxDist) * plotHeight * 0.95;
+  }
+
+  // Inverse: SVG y → distance
+  function svgYToDistance(svgY) {
+    return Math.max(0, Math.min(maxDist,
+      (baselineY - svgY) / (plotHeight * 0.95) * maxDist));
+  }
+
+  // How many clusters does cutting at this distance threshold produce?
+  function distanceToClusters(threshold) {
+    const mergesDone = history.filter(m => Number(m.distance) <= threshold).length;
+    return Math.max(1, history.length + 1 - mergesDone);
+  }
+
+  // Convert clientY (page pixels) → SVG coordinate space, respecting zoom/pan
+  function clientYToSvgY(clientY) {
+    const wrapRect = wrap.getBoundingClientRect();
+    const scale = parseFloat(svg.dataset.scale || '1') || 1;
+    const ty    = parseFloat(svg.dataset.ty    || '0') || 0;
+    return (clientY - wrapRect.top - ty) / scale;
+  }
+
+  // Initial cut position: midpoint between last kept merge and first discarded merge
+  const cutStep = result.cut_step || 0;
+  let initDist;
+  if (cutStep > 0 && cutStep <= history.length) {
+    const lastKept    = Number(history[cutStep - 1]?.distance) || 0;
+    const firstDropped = Number(history[cutStep]?.distance)   || maxDist;
+    initDist = (lastKept + firstDropped) / 2;
+  } else {
+    initDist = maxDist * 0.5;
+  }
+
+  let currentDist = Math.max(0, Math.min(maxDist, initDist));
+  let dragging = false;
+
+  function updateCutLine(dist) {
+    currentDist = Math.max(0, Math.min(maxDist, dist));
+    const svgY     = distanceToSvgY(currentDist);
+    const nClusters = distanceToClusters(currentDist);
+    const sim      = (1 - currentDist).toFixed(3);
+
+    // Move visible line and transparent hit area
+    cutLineEl.setAttribute('y1', svgY);
+    cutLineEl.setAttribute('y2', svgY);
+    if (hitEl) { hitEl.setAttribute('y1', svgY); hitEl.setAttribute('y2', svgY); }
+    if (cutLabelEl) {
+      cutLabelEl.setAttribute('y', svgY - 8);
+      cutLabelEl.textContent = `cut: ${nClusters} cluster${nClusters !== 1 ? 's' : ''} (sim ≥ ${sim})`;
+    }
+    if (cutInfoEl) {
+      cutInfoEl.textContent = `${nClusters} cluster${nClusters !== 1 ? 's' : ''} · similarity threshold: ${sim}`;
+    }
+  }
+
+  // Attach drag to the HIT AREA (not cutLineEl which has pointer-events:none)
+  const dragTarget = hitEl || cutLineEl;
+
+  dragTarget.addEventListener('mousedown', function(e) {
+    dragging = true;
+    e.stopPropagation();
+    e.preventDefault();
+    document.body.style.cursor = 'ns-resize';
+  });
+
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    updateCutLine(svgYToDistance(clientYToSvgY(e.clientY)));
+  });
+
+  window.addEventListener('mouseup', function() {
+    if (!dragging) return;
+    dragging = false;
+    document.body.style.cursor = '';
+    wrap.style.cursor = 'grab';
+  });
+
+  dragTarget.addEventListener('touchstart', function(e) {
+    dragging = true;
+    e.stopPropagation();
+  }, { passive: true });
+  window.addEventListener('touchmove', function(e) {
+    if (!dragging) return;
+    updateCutLine(svgYToDistance(clientYToSvgY(e.touches[0].clientY)));
+  }, { passive: true });
+  window.addEventListener('touchend', function() { dragging = false; });
+
+  // Set initial position
+  updateCutLine(currentDist);
+
+  // Apply Cut button — calls /api/cluster/recut with the current cut_step
+  const applyBtn = document.getElementById(uid + '_applycut');
+  if (applyBtn) {
+    applyBtn.addEventListener('click', async function() {
+      const resultId = State.lastResult?._id;
+      if (!resultId) {
+        alert('No saved result to recut. Run the clustering first.');
+        return;
+      }
+
+      // Convert current distance threshold → cut_step
+      // cut_step = number of merges with distance <= currentDist
+      const newCutStep = history.filter(m => Number(m.distance) <= currentDist).length;
+
+      applyBtn.disabled = true;
+      applyBtn.textContent = '⏳ Applying…';
+
+      try {
+        const res = await fetch(`${API}/api/cluster/recut`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ result_id: resultId, cut_step: newCutStep })
+        });
+        const data = await res.json();
+        if (!data.success) {
+          alert('Recut failed: ' + data.error);
+          return;
+        }
+        // Update displayed result with the recut output
+        displayResult(data.result);
+        // Switch to cards view so user sees the new clusters
+        switchView('cards');
+      } catch (err) {
+        alert('Recut error: ' + err.message);
+      } finally {
+        applyBtn.disabled = false;
+        applyBtn.textContent = '✓ Apply Cut';
+      }
+    });
+  }
+}
+
+// ── Dendrogram zoom / pan — called after innerHTML is set ────────────────────
+function initDendrogramZoom(uid) {
+  const wrap = document.getElementById(uid + '_wrap');
+  const svg  = document.getElementById(uid + '_svg');
+  const btnIn  = document.getElementById(uid + '_zoomin');
+  const btnOut = document.getElementById(uid + '_zoomout');
+  const btnRst = document.getElementById(uid + '_reset');
+  if (!wrap || !svg) return;
+
+  let scale = 1, tx = 0, ty = 0;
+  let dragging = false, startX = 0, startY = 0, startTx = 0, startTy = 0;
+
+  function apply() {
+    svg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+  }
+
+  function zoomBy(factor, cx, cy) {
+    cx = cx !== undefined ? cx : wrap.clientWidth / 2;
+    cy = cy !== undefined ? cy : wrap.clientHeight / 2;
+    const ns = Math.min(10, Math.max(0.15, scale * factor));
+    tx = cx - (cx - tx) * (ns / scale);
+    ty = cy - (cy - ty) * (ns / scale);
+    scale = ns;
+    apply();
+  }
+
+  // Toolbar buttons
+  if (btnIn)  btnIn.addEventListener('click',  function() { zoomBy(1.3); });
+  if (btnOut) btnOut.addEventListener('click', function() { zoomBy(0.75); });
+  if (btnRst) btnRst.addEventListener('click', function() {
+    scale = 1; tx = 0; ty = 0;
+    svg.style.transform = '';
+  });
+
+  // Scroll to zoom (centered on mouse cursor)
+  wrap.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    const rect = wrap.getBoundingClientRect();
+    zoomBy(e.deltaY < 0 ? 1.15 : 0.87, e.clientX - rect.left, e.clientY - rect.top);
+  }, { passive: false });
+
+  // Mouse drag to pan
+  wrap.addEventListener('mousedown', function(e) {
+    dragging = true;
+    wrap.style.cursor = 'grabbing';
+    startX = e.clientX; startY = e.clientY;
+    startTx = tx; startTy = ty;
+    e.preventDefault();
+  });
+  window.addEventListener('mousemove', function(e) {
+    if (!dragging) return;
+    tx = startTx + (e.clientX - startX);
+    ty = startTy + (e.clientY - startY);
+    apply();
+  });
+  window.addEventListener('mouseup', function() {
+    if (dragging) { dragging = false; wrap.style.cursor = 'grab'; }
+  });
+
+  // Touch: single-finger pan, two-finger pinch zoom
+  let lastTouchDist = null;
+  wrap.addEventListener('touchstart', function(e) {
+    if (e.touches.length === 1) {
+      dragging = true;
+      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
+      startTx = tx; startTy = ty;
+    } else if (e.touches.length === 2) {
+      lastTouchDist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY);
+    }
+  }, { passive: true });
+  wrap.addEventListener('touchmove', function(e) {
+    if (e.touches.length === 1 && dragging) {
+      tx = startTx + (e.touches[0].clientX - startX);
+      ty = startTy + (e.touches[0].clientY - startY);
+      apply();
+    } else if (e.touches.length === 2 && lastTouchDist != null) {
+      const d = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY);
+      zoomBy(d / lastTouchDist);
+      lastTouchDist = d;
+    }
+  }, { passive: true });
+  wrap.addEventListener('touchend', function() {
+    dragging = false; lastTouchDist = null;
+  });
+}
+
 function renderDendrogram(result) {
   const body = document.getElementById("dendrogram-body");
   if (!body) return;
@@ -1213,6 +1476,12 @@ function renderDendrogram(result) {
     return;
   }
 
+  const svgHtml = buildDendrogramSvg(result, history);
+
+  // Extract the uid stamped as an HTML comment so we can wire up zoom/pan.
+  const uidMatch = svgHtml.match(/<!-- uid:(dg_\d+) -->/);
+  const uid = uidMatch ? uidMatch[1] : null;
+
   body.innerHTML = `
     <div class="dendrogram-panel dendrogram-graph-panel">
       <h4>Dendrogram graph</h4>
@@ -1220,8 +1489,14 @@ function renderDendrogram(result) {
         Graph view of the hierarchical clustering process. Leaves are countries, internal nodes are merges,
         and lower merge height means higher similarity.
       </p>
-      ${buildDendrogramSvg(result, history)}
+      ${svgHtml}
     </div>`;
+
+  // Wire up zoom/pan NOW that the DOM is present.
+  if (uid) {
+    initDendrogramZoom(uid);
+    initDendrogramCutLine(uid, result);
+  }
 }
 
 function renderMergeHistory(result) {
@@ -1286,48 +1561,41 @@ function buildDendrogramSvg(result, history) {
   if (!n)
     return '<p class="saved-empty">No countries available for dendrogram.</p>';
 
+  // Declare uid HERE — before any template literal uses it below.
+  const uid = `dg_${Date.now()}`;
+
   const width = Math.max(980, n * 140);
   const height = 540;
-  const margin = { top: 55, right: 70, bottom: 130, left: 72 };
+  const margin = { top: 55, right: 70, bottom: 130, left: 80 };
   const baselineY = height - margin.bottom;
   const plotHeight = baselineY - margin.top;
   const xStep = n > 1 ? (width - margin.left - margin.right) / (n - 1) : 0;
+
+  // ── FIX 1: Use actual distances as Y; never distort with artificial gaps ──
+  // The old code pushed merges up by minMergeGapPx which caused all branches
+  // to pile at the top (near distance=1.0) when real distances were clustered
+  // close together (e.g. all 0.5 from feature-TED). The Y axis must faithfully
+  // reflect actual distances — use proportional Y only.
   const maxDist = Math.max(
     ...history.map((m) => Number(m.distance) || 0),
     1e-9,
   );
+
+  // Pad the top slightly so labels don't clip
+  const yScale = (distance) =>
+    baselineY - ((Number(distance) || 0) / maxDist) * plotHeight * 0.95;
+
+  history.forEach((merge) => {
+    merge._displayY = yScale(Number(merge.distance) || 0);
+  });
+
   const cutStep =
     result.cut_step ||
     Math.max(0, (result.n_countries || 0) - (result.n_clusters || 0));
   const cutMerge = history.find((m) => Number(m.step) === Number(cutStep));
   const nextMerge = history.find((m) => Number(m.step) === Number(cutStep + 1));
-  const cutDistance = nextMerge
-    ? ((Number(cutMerge?.distance) || 0) + (Number(nextMerge.distance) || 0)) /
-      2
-    : Number(cutMerge?.distance) || maxDist;
 
-  const rawYForDistance = (distance) =>
-    baselineY - ((Number(distance) || 0) / maxDist) * plotHeight;
-
-  // Create visually spaced Y positions for merge levels,
-  // so very close distances do not overlap visually.
-  const minMergeGapPx = 34;
-
-  history.forEach((merge, idx) => {
-    let y = rawYForDistance(Number(merge.distance) || 0);
-
-    if (idx > 0) {
-      const prevY = history[idx - 1]._displayY;
-      y = Math.min(y, prevY - minMergeGapPx);
-    }
-
-    y = Math.max(margin.top + 10, y);
-    merge._displayY = y;
-  });
-
-  const yForDistance = (distance) => rawYForDistance(distance);
   const nodes = new Map();
-
   countries.forEach((country, index) => {
     nodes.set(index, {
       id: index,
@@ -1340,18 +1608,21 @@ function buildDendrogramSvg(result, history) {
   });
 
   const parts = [];
-  const yTicks = 4;
+
+  // Y-axis grid ticks — use actual distance scale
+  const yTicks = 5;
   for (let i = 0; i <= yTicks; i++) {
     const dist = (maxDist / yTicks) * i;
-    const y = yForDistance(dist);
+    const y = yScale(dist);
     parts.push(
       `<line x1="${margin.left - 12}" y1="${y}" x2="${width - margin.right + 12}" y2="${y}" class="dendro-grid"/>`,
     );
     parts.push(
-      `<text x="${margin.left - 18}" y="${y + 4}" class="dendro-axis-label" text-anchor="end">${dist.toFixed(2)}</text>`,
+      `<text x="${margin.left - 16}" y="${y + 4}" class="dendro-axis-label" text-anchor="end">${(1 - dist).toFixed(2)}</text>`,
     );
   }
 
+  // Draw branches
   history.forEach((merge) => {
     const left = nodes.get(Number(merge.left));
     const right = nodes.get(Number(merge.right));
@@ -1371,13 +1642,14 @@ function buildDendrogramSvg(result, history) {
       `<line x1="${left.x}" y1="${parentY}" x2="${right.x}" y2="${parentY}" class="dendro-branch"/>`,
     );
 
+    // Show distance label on first, last, and every other merge
     if (
       merge.step === 1 ||
       merge.step === history.length ||
       merge.step % 2 === 0
     ) {
       parts.push(
-        `<text x="${parentX}" y="${parentY - 7}" class="dendro-dist-label" text-anchor="middle">${Number(merge.distance).toFixed(3)}</text>`,
+        `<text x="${parentX}" y="${parentY - 7}" class="dendro-dist-label" text-anchor="middle">${(1 - Number(merge.distance)).toFixed(3)}</text>`,
       );
     }
 
@@ -1390,22 +1662,36 @@ function buildDendrogramSvg(result, history) {
     });
   });
 
-  const cutY = nextMerge
-    ? (((cutMerge && cutMerge._displayY) || baselineY) + nextMerge._displayY) /
-      2
-    : (cutMerge && cutMerge._displayY) || rawYForDistance(cutDistance);
-  if (result.n_clusters > 1) {
+  // Cut line — draggable, initialised by initDendrogramCutLine() after render
+  {
+    const cutY = nextMerge
+      ? ((cutMerge?._displayY ?? baselineY) + nextMerge._displayY) / 2
+      : cutMerge?._displayY ?? yScale(maxDist * 0.5);
+    // Thicker transparent hit area makes the line easy to grab
     parts.push(
-      `<line x1="${margin.left - 8}" y1="${cutY}" x2="${width - margin.right + 8}" y2="${cutY}" class="dendro-cut-line"/>`,
+      `<line id="${uid}_cutline_hit"
+            x1="${margin.left - 8}" y1="${cutY}"
+            x2="${width - margin.right + 8}" y2="${cutY}"
+            stroke="transparent" stroke-width="14"
+            style="cursor:ns-resize;"/>`,
     );
     parts.push(
-      `<text x="${width - margin.right}" y="${cutY - 8}" class="dendro-cut-label" text-anchor="end">cut: ${result.n_clusters} clusters</text>`,
+      `<line id="${uid}_cutline"
+            x1="${margin.left - 8}" y1="${cutY}"
+            x2="${width - margin.right + 8}" y2="${cutY}"
+            class="dendro-cut-line" style="cursor:ns-resize;pointer-events:none;"/>`,
+    );
+    parts.push(
+      `<text id="${uid}_cutlabel"
+            x="${width - margin.right}" y="${cutY - 8}"
+            class="dendro-cut-label" text-anchor="end">cut: ${result.n_clusters} clusters</text>`,
     );
   }
 
+  // Leaf dots + rotated labels
   countries.forEach((country, index) => {
     const x = margin.left + index * xStep;
-    const short = country.length > 14 ? `${country.slice(0, 12)}...` : country;
+    const short = country.length > 14 ? `${country.slice(0, 12)}…` : country;
     parts.push(
       `<circle cx="${x}" cy="${baselineY}" r="4" class="dendro-leaf-dot"><title>${escapeHtml(country)}</title></circle>`,
     );
@@ -1414,6 +1700,7 @@ function buildDendrogramSvg(result, history) {
     );
   });
 
+  // Axes
   parts.push(
     `<line x1="${margin.left - 12}" y1="${baselineY}" x2="${width - margin.right + 12}" y2="${baselineY}" class="dendro-axis"/>`,
   );
@@ -1421,15 +1708,31 @@ function buildDendrogramSvg(result, history) {
     `<line x1="${margin.left}" y1="${margin.top}" x2="${margin.left}" y2="${baselineY}" class="dendro-axis"/>`,
   );
   parts.push(
-    `<text x="${margin.left - 48}" y="${margin.top + 4}" class="dendro-axis-title" text-anchor="middle" transform="rotate(-90 ${margin.left - 48} ${margin.top + 4})">Normalized distance</text>`,
+    `<text x="${margin.left - 52}" y="${margin.top + plotHeight / 2}" class="dendro-axis-title" text-anchor="middle" transform="rotate(-90 ${margin.left - 52} ${margin.top + plotHeight / 2})">Similarity</text>`,
   );
 
   return `
-    <div class="dendro-svg-wrap">
-      <svg class="dendro-svg" viewBox="0 0 ${width} ${height}" role="img" aria-label="Agglomerative hierarchical dendrogram">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:8px 12px;background:#f8f5ff;border:1px solid #c4b5fd;border-radius:6px;flex-wrap:wrap;">
+      <span style="font-size:0.8rem;">🖱 <strong>Drag the cut line</strong> up/down to change the number of clusters</span>
+      <span id="${uid}_cutinfo" style="font-size:0.82rem;font-weight:600;color:#5b21b6;"></span>
+      <button id="${uid}_applycut" style="margin-left:auto;padding:5px 14px;background:#5b21b6;color:#fff;border:none;border-radius:6px;font-size:0.82rem;font-weight:600;cursor:pointer;">✓ Apply Cut</button>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+      <span style="font-size:0.8rem;font-weight:600;color:var(--ink-soft);">Zoom</span>
+      <button id="${uid}_zoomin"  style="padding:4px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;font-size:0.85rem;font-weight:700;">＋</button>
+      <button id="${uid}_zoomout" style="padding:4px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;font-size:0.85rem;font-weight:700;">－</button>
+      <button id="${uid}_reset"   style="padding:4px 10px;border:1.5px solid var(--border);border-radius:6px;background:var(--white);cursor:pointer;font-size:0.82rem;">Reset</button>
+      <span style="font-size:0.76rem;color:var(--ink-soft);margin-left:4px;">Scroll to zoom · Drag to pan</span>
+    </div>
+    <div id="${uid}_wrap" class="dendro-svg-wrap">
+      <svg id="${uid}_svg" class="dendro-svg" viewBox="0 0 ${width} ${height}"
+           style="transform-origin:top left;"
+           role="img" aria-label="Agglomerative hierarchical dendrogram">
         ${parts.join("")}
       </svg>
-    </div>`;
+    </div>`
+    // NOTE: zoom/pan JS is wired up by initDendrogramZoom() called after innerHTML is set
+    + `<!-- uid:${uid} -->`;
 }
 
 function getDendrogramCountryOrder(result, history) {
@@ -2066,23 +2369,23 @@ async function renderHeatmap() {
   wrap.innerHTML =
     '<p style="color:var(--ink-soft);padding:16px">Loading heatmap…</p>';
 
-  /* Use the matrix associated with the selected/loaded result. */
-  let matrixCountries;
-  if (State.fullMatrix && State.fullMatrix.countries) {
-    matrixCountries = State.fullMatrix.countries;
-  } else if (result.matrix_id) {
+  /* Always load the matrix that belongs to THIS result to get real scores. */
+  const needsFetch = !State.fullMatrix
+    || !State.fullMatrix.matrix          // no actual cell data
+    || (result.matrix_id && State.fullMatrix._id !== result.matrix_id);
+
+  if (needsFetch && result.matrix_id) {
     try {
       const res = await fetch(`${API}/api/cluster/matrix/${result.matrix_id}`);
       const data = await res.json();
-      if (data.success) {
-        State.fullMatrix = data.matrix;
-        matrixCountries = data.matrix.countries;
-      }
+      if (data.success) State.fullMatrix = data.matrix;
     } catch (_) {}
   }
-  if (!matrixCountries) {
+
+  const matrixCountries = State.fullMatrix?.countries;
+  if (!matrixCountries || !State.fullMatrix?.matrix) {
     wrap.innerHTML =
-      '<p style="color:var(--ink-soft);padding:16px">No matrix available for heatmap.</p>';
+      '<p style="color:var(--ink-soft);padding:16px">No similarity matrix available. Make sure the matrix is still saved.</p>';
     return;
   }
 
@@ -2116,22 +2419,22 @@ async function renderHeatmap() {
   ctx.fillStyle = "#fff";
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-  /* Draw cells */
-  const repSet = new Set(
-    Object.values(result.clusters).map((cl) => cl.medoid || cl.representative),
-  );
+  /* Draw cells — use real similarity scores from the matrix */
+  // Build index: country name → position in the full matrix
+  const matrixIndex = new Map();
+  State.fullMatrix.countries.forEach((c, i) => matrixIndex.set(c, i));
 
   for (let row = 0; row < n; row++) {
     for (let col = 0; col < n; col++) {
-      let sim = 0.15;
+      let sim;
       if (row === col) {
         sim = 1.0;
       } else {
-        const cRow = result.labels?.[countries[row]];
-        const cCol = result.labels?.[countries[col]];
-        if (cRow !== undefined && cRow !== "noise" && cRow === cCol) {
-          sim = 0.68;
-        }
+        const ri = matrixIndex.get(countries[row]);
+        const ci = matrixIndex.get(countries[col]);
+        sim = (ri !== undefined && ci !== undefined)
+          ? (State.fullMatrix.matrix[ri][ci] ?? 0)
+          : 0;
       }
       ctx.fillStyle = simToColor(sim);
       ctx.fillRect(PAD + col * CELL, PAD + row * CELL, CELL - 1, CELL - 1);

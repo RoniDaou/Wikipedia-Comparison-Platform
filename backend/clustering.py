@@ -339,26 +339,11 @@ class SimilarityMatrixBuilder:
     def _three_level_similarity(self, set_a: set, set_b: set,
                                 shared_values: set) -> float:
         """
-        Three-level similarity for any categorical set-valued feature.
+        Three-level similarity for categorical set-valued features.
 
-        Level 1 — Both sets share at least one shared value:
-            Jaccard restricted to shared values, so unique minority values
-            don't dilute the similarity signal.
-            e.g. {'arabic','kurdish'} vs {'arabic'}: shared={'arabic'}
-                 -> Jaccard({'arabic'},{'arabic'}) = 1.0
-
-        Level 2 — No shared value overlap, but both have ONLY unique values:
-            Return 0.5. They share the 'unique language country' property —
-            more similar to each other than to shared-language countries.
-            e.g. {'japanese'} vs {'korean'}: both unique -> 0.5
-
-        Level 3 — One has a shared value the other lacks:
-            Return 0.0. Maximum separation.
-            e.g. {'arabic'} vs {'japanese'}: arabic is shared, japanese unique -> 0.0
-
-        This matches the same logic used for currency and solves the giant
-        Cluster 0 problem: unique-language countries now get 0.5 signal
-        against each other instead of 0.0.
+        Level 1 — both share at least one widespread value → Jaccard on shared values
+        Level 2 — both have only unique values → 0.5 (share the "sovereign" property)
+        Level 3 — one has a shared value, other doesn't → 0.0 (maximum separation)
         """
         if not set_a and not set_b:
             return 0.0
@@ -366,16 +351,13 @@ class SimilarityMatrixBuilder:
         shared_in_a = set_a & shared_values
         shared_in_b = set_b & shared_values
 
-        # Level 1: both have shared values — compare on shared values only
         if shared_in_a and shared_in_b:
             return self._jaccard_similarity(shared_in_a, shared_in_b)
 
-        # Level 2: neither has any shared value — both are unique-language
         if not shared_in_a and not shared_in_b:
-            return 0.5
+            return 0.5      # both sovereign/unique — share that property
 
-        # Level 3: one has a shared value, the other doesn't
-        return 0.0
+        return 0.0          # one shared, one unique — maximally different
 
     def _feature_similarity(self, val_a: str, val_b: str,
                             group: str,
@@ -394,10 +376,10 @@ class SimilarityMatrixBuilder:
             if code_a is None or code_b is None:
                 return 0.0
             if code_a == code_b:
-                return 1.0
+                return 1.0                          # identical currency
             if code_a not in shared and code_b not in shared:
-                return 0.5
-            return 0.0
+                return 0.5                          # both sovereign/unique
+            return 0.0                              # one shared, one not
 
         set_a = self._extract_item_set(val_a)
         set_b = self._extract_item_set(val_b)
@@ -500,9 +482,15 @@ class SimilarityMatrixBuilder:
         for i in range(n):
             matrix[i][i] = 1.0
 
-        # Derive shared values for all selected feature groups from the dataset.
-        # Empty dict when no features selected (full TED path).
-        shared_by_group = self._derive_shared_codes(country_names, selected_features)
+        # Derive shared values using ALL countries in the DB — not just the matrix
+        # subset. This ensures currencies/languages used by countries outside the
+        # current selection are still counted as "shared" when they should be.
+        # e.g. USD must be marked shared even if only 1 USD country is in the matrix.
+        all_db_countries = list(self.db.get_country_names())
+        shared_by_group = self._derive_shared_codes(
+            all_db_countries if all_db_countries else country_names,
+            selected_features
+        )
 
         total_pairs = n * (n - 1) // 2
         done = 0
@@ -748,10 +736,16 @@ class ClusteringPipeline:
         return result
 
     def run_agglomerative(self, matrix_doc: Dict,
-                          n_clusters: int = 3,
+                          n_clusters: int = None,
                           linkage: str = 'average',
-                          name: str = '') -> Dict:
-        """Run Agglomerative Hierarchical Clustering on a matrix document."""
+                          name: str = '',
+                          auto_cut: bool = False) -> Dict:
+        """Run Agglomerative Hierarchical Clustering on a matrix document.
+
+        Args:
+            n_clusters : number of clusters for manual cut, or None for auto.
+            auto_cut   : if True, ignore n_clusters and use biggest-gap heuristic.
+        """
         countries = matrix_doc['countries']
         sim_m     = matrix_doc['matrix']
         dist_m    = [[similarity_to_distance(sim_m[i][j])
@@ -762,11 +756,11 @@ class ClusteringPipeline:
         perp   = min(50, max(5, len(countries) // 3))
         tsne   = TSNE2D(perplexity=perp, early_exaggeration=20.0,
                         iterations=1500, seed=42)
-        # Use temporary zero labels for layout; final cluster labels are assigned
-        # by AgglomerativeClustering after the hierarchical merges.
         coords = tsne.fit(dist_m)
 
-        algo   = AgglomerativeClustering(n_clusters=n_clusters, linkage=linkage)
+        # None passed to AgglomerativeClustering triggers auto biggest-gap cut.
+        effective_k = None if auto_cut else (n_clusters or 3)
+        algo   = AgglomerativeClustering(n_clusters=effective_k, linkage=linkage)
         result = algo.fit(countries, dist_m, coords=coords)
         matrix_id = str(matrix_doc.get('_id', ''))
         inserted_id = self.db.save_cluster_result(result, name=name, matrix_id=matrix_id)

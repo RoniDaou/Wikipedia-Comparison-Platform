@@ -1231,25 +1231,126 @@ def run_clustering():
             result = clustering_pipeline.run_kmeans(
                 matrix_doc, k=k, max_iter=max_iter, n_init=n_init, name=name)
         else:
-            n_clusters = int(data.get('n_clusters', data.get('k', 3)))
+            auto_cut   = bool(data.get('auto_cut', False))
             linkage    = data.get('linkage', 'average')
-            if n_clusters < 1:
-                return jsonify({'success': False, 'error': 'n_clusters must be ≥ 1'}), 400
-            if n_clusters > matrix_doc['count']:
-                return jsonify({'success': False,
-                                'error': f'n_clusters={n_clusters} > available countries ({matrix_doc["count"]})'}), 400
             if linkage not in ('average', 'single', 'complete'):
                 return jsonify({'success': False,
                                 'error': 'linkage must be "average", "single", or "complete"'}), 400
 
+            if auto_cut:
+                n_clusters = None
+            else:
+                n_clusters = int(data.get('n_clusters', data.get('k', 3)))
+                if n_clusters < 1:
+                    return jsonify({'success': False, 'error': 'n_clusters must be ≥ 1'}), 400
+                if n_clusters > matrix_doc['count']:
+                    return jsonify({'success': False,
+                                    'error': f'n_clusters={n_clusters} > available countries ({matrix_doc["count"]})'}), 400
+
             result = clustering_pipeline.run_agglomerative(
-                matrix_doc, n_clusters=n_clusters, linkage=linkage, name=name)
+                matrix_doc, n_clusters=n_clusters, linkage=linkage,
+                name=name, auto_cut=auto_cut)
 
         return jsonify({'success': True, 'result': result})
 
     except Exception as exc:
         return jsonify({'success': False, 'error': str(exc)}), 500
 
+
+
+@app.route('/api/cluster/recut', methods=['POST'])
+def recut_agglomerative():
+    """
+    Re-apply a different cut to an existing agglomerative result.
+    Does NOT re-run the full algorithm — replays the stored merge_history
+    at a new cut point, then returns updated cluster assignments.
+
+    Body (JSON):
+        {
+            "result_id":  "<_id of saved cluster result>",
+            "cut_step":   42,          // number of merges to keep
+            "name":       "optional"   // label for the new saved result
+        }
+    """
+    try:
+        data      = request.get_json() or {}
+        result_id = data.get('result_id', '')
+        cut_step  = data.get('cut_step')
+        name      = data.get('name', '')
+
+        if not result_id:
+            return jsonify({'success': False, 'error': 'result_id is required'}), 400
+        if cut_step is None:
+            return jsonify({'success': False, 'error': 'cut_step is required'}), 400
+
+        cut_step = int(cut_step)
+        existing = db.get_cluster_result(result_id)
+        if not existing:
+            return jsonify({'success': False, 'error': 'Result not found'}), 404
+        if existing.get('algorithm') != 'agglomerative':
+            return jsonify({'success': False,
+                            'error': 'recut only works on agglomerative results'}), 400
+
+        history = existing.get('merge_history') or existing.get('dendrogram') or []
+        if not history:
+            return jsonify({'success': False, 'error': 'No merge history in result'}), 400
+
+        n = existing.get('n_countries', 0)
+        if n == 0:
+            return jsonify({'success': False, 'error': 'n_countries missing from result'}), 400
+
+        cut_step = max(0, min(cut_step, len(history)))
+
+        # Replay merges up to cut_step
+        clusters = {i: [i] for i in range(n)}
+        next_id  = n
+        countries_list = list(existing.get('labels', {}).keys())
+
+        for merge in history[:cut_step]:
+            a_id = int(merge['left'])
+            b_id = int(merge['right'])
+            merged = clusters.pop(a_id, []) + clusters.pop(b_id, [])
+            clusters[next_id] = merged
+            next_id += 1
+
+        final_clusters = sorted(clusters.values(), key=lambda m: (min(m), len(m)))
+        n_clusters_actual = len(final_clusters)
+
+        # Build labels and cluster dicts
+        labels = {}
+        clusters_out = {}
+        for cidx, members in enumerate(final_clusters):
+            member_names = [countries_list[i] for i in members if i < len(countries_list)]
+            rep = member_names[0] if member_names else ''
+            clusters_out[str(cidx)] = {
+                'id': cidx,
+                'representative': rep,
+                'members': member_names,
+                'size': len(member_names),
+                'centroid': existing.get('clusters', {}).get(str(cidx), {}).get('centroid', [0, 0])
+            }
+            for name_c in member_names:
+                labels[name_c] = cidx
+
+        from agglomerative import AgglomerativeClustering
+        result_out = dict(existing)
+        result_out.pop('_id', None)
+        result_out['n_clusters'] = n_clusters_actual
+        result_out['cut_step']   = cut_step
+        result_out['labels']     = labels
+        result_out['clusters']   = clusters_out
+        result_out['auto_cut']   = False
+        result_out['recut_from'] = result_id
+
+        return app.response_class(
+            response=json.dumps({'success': True, 'result': result_out},
+                                cls=MongoJSONEncoder),
+            status=200,
+            mimetype='application/json'
+        )
+    except Exception as exc:
+        import traceback; traceback.print_exc()
+        return jsonify({'success': False, 'error': str(exc)}), 500
 
 # ── Exploration helpers ───────────────────────────────────────────────────
 
