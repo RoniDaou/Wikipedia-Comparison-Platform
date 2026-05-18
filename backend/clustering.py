@@ -197,6 +197,10 @@ class SimilarityMatrixBuilder:
             'total area',
             'land area',
             'surface area',
+            # Wikipedia infobox area sub-row — exact "Total" only.
+            # "Total (2)", "Total (3)" are intentionally excluded via
+            # _canonical_group's numbered-suffix guard (see that method).
+            'total',
         ],
         'population': [
             'population',
@@ -221,6 +225,17 @@ class SimilarityMatrixBuilder:
             'gni per capita',
             'gnp per capita',
         ],
+        'water': [
+            'water',
+            'water (%)',
+            'water(%)',
+            'water percentage',
+            'water percent',
+            'water area',
+            'water area (%)',
+            'percent water',
+            'percentage water',
+        ],
     }
 
     _FIELD_GROUP_LOOKUP: Dict[str, str] = {
@@ -229,10 +244,28 @@ class SimilarityMatrixBuilder:
         for variant in variants
     }
 
+    # Fields whose base name is shared with a group variant but whose
+    # numbered suffix (2), (3), ... must NOT be grouped with it.
+    # e.g. "Total (2)" and "Total (3)" are secondary area sub-rows that
+    # carry different data and must be ignored for the 'area' group.
+    _NUMBERED_SUFFIX_RE = re.compile(r'\s*\(\s*\d+\s*\)\s*$', re.IGNORECASE)
+
     def _canonical_group(self, field: str) -> Optional[str]:
-        """Return the canonical group name for a field, or None if ungrouped."""
-        norm = re.sub(r'\s*\([^)]*\)', '',
-                      str(field or '').lower()).strip()
+        """
+        Return the canonical group name for a field, or None if ungrouped.
+
+        Special guard: fields with a numbered parenthetical suffix like
+        "Total (2)" or "Total (3)" are excluded from all groups even though
+        their base name ("total") is a registered variant.  This prevents
+        secondary Wikipedia infobox sub-rows from polluting the area group.
+        """
+        raw = str(field or '').lower().strip()
+
+        # Block "total (2)", "total (3)", etc. before any stripping
+        if self._NUMBERED_SUFFIX_RE.search(raw):
+            return None
+
+        norm = re.sub(r'\s*\([^)]*\)', '', raw).strip()
         if norm in self._FIELD_GROUP_LOOKUP:
             return self._FIELD_GROUP_LOOKUP[norm]
         for variant, canonical in self._FIELD_GROUP_LOOKUP.items():
@@ -247,6 +280,10 @@ class SimilarityMatrixBuilder:
         semantic group as selected_field. Field title is ignored — only
         the value inside matters.
         Falls back to exact field lookup for ungrouped fields.
+
+        Numbered-suffix fields (e.g. "Total (2)", "Total (3)") are
+        intentionally excluded: _canonical_group returns None for them,
+        so they never contribute to any group's merged value.
         """
         group = self._canonical_group(selected_field)
         if group is not None:
@@ -282,6 +319,11 @@ class SimilarityMatrixBuilder:
 
     # Canonical groups that contain numerical data
     _NUMERICAL_GROUPS = {'density', 'area', 'population', 'gdp', 'per_capita'}
+
+    # Canonical groups that are bounded percentages (0–100).
+    # These use a dedicated similarity function instead of the log-ratio
+    # one used for huge unbounded numbers like density or GDP.
+    _PERCENTAGE_GROUPS = {'water'}
 
     @staticmethod
     def _extract_numerical_value(value: str) -> Optional[float]:
@@ -339,6 +381,117 @@ class SimilarityMatrixBuilder:
             return 1.0
         log_diff = abs(math.log10(a) - math.log10(b))
         return max(0.0, 1.0 - log_diff / 4.0)
+
+    # ── Water percentage ────────────────────────────────────────────────
+
+    @staticmethod
+    def _parse_water_percent(raw: str) -> Optional[float]:
+        """
+        Parse a Wikipedia water-percentage infobox value into a float.
+
+        Handles all observed formats:
+          "9.71 (2015)"   → 9.71   (year in parentheses — stripped first)
+          "3.5%"          → 3.5
+          "3%"            → 3.0
+          "3"             → 3.0
+          "~3.5%"         → 3.5    (tilde prefix)
+          "< 1%"          → 1.0    (inequality prefix)
+          "> 1%"          → 1.0
+          "3,5"           → 3.5    (European decimal comma)
+          "2–4%"          → 3.0    (range → midpoint)
+          "2-4%"          → 3.0    (hyphen range → midpoint)
+          "negligible"    → 0.0    (known-zero word)
+          "none"          → 0.0
+          "minimal"       → 0.0
+          "trace"         → 0.0
+          "0"             → 0.0
+          "N/A", "", None → None   (unknown — not the same as zero)
+        """
+        if raw is None:
+            return None
+
+        text = str(raw).strip()
+        if not text:
+            return None
+
+        # Step 1: strip parenthetical content (years, citations, footnotes)
+        # e.g. "9.71 (2015)" → "9.71"
+        text = re.sub(r'\([^)]*\)', '', text).strip()
+
+        # Step 2: known-zero words → 0.0  (we KNOW the value, it's just tiny)
+        lower = text.lower()
+        if lower in {'negligible', 'none', 'minimal', 'trace',
+                     'insignificant', 'virtually none', '0'}:
+            return 0.0
+
+        # Step 3: unknown/missing markers → None  (we do NOT know the value)
+        if lower in {'n/a', 'na', 'unknown', '-', '—', 'not available',
+                     'not applicable', ''}:
+            return None
+
+        # Step 4: strip leading operators and % sign
+        text = re.sub(r'^[~<>≤≥≈±\s]+', '', text)
+        text = text.replace('%', '').strip()
+
+        # Step 5: European decimal comma → period  (e.g. "3,5" → "3.5")
+        # Only when comma is followed by exactly 1–2 digits at end of string
+        text = re.sub(r',(\d{1,2})$', r'.\1', text)
+
+        # Step 6: range → midpoint  (e.g. "2–4" or "2-4" → 3.0)
+        range_match = re.search(r'([\d.]+)\s*[–\-]\s*([\d.]+)', text)
+        if range_match:
+            try:
+                lo = float(range_match.group(1))
+                hi = float(range_match.group(2))
+                return (lo + hi) / 2.0
+            except ValueError:
+                pass
+
+        # Step 7: plain float/int
+        plain_match = re.search(r'[\d.]+', text)
+        if plain_match:
+            try:
+                return float(plain_match.group())
+            except ValueError:
+                pass
+
+        return None  # unparseable → treat as unknown
+
+    @staticmethod
+    def _water_percent_similarity(val_a: str, val_b: str,
+                                  max_val: float) -> float:
+        """
+        Similarity for bounded percentage fields (water %).
+
+        Unlike density/GDP which span many orders of magnitude, water %
+        is always 0–100 and in practice rarely exceeds ~15–20% for most
+        countries. Dividing by the theoretical max (100) would make every
+        difference look tiny, so we divide by the actual maximum water %
+        observed across the countries in the current dataset.
+
+        Formula:  sim = max(0,  1 − |a − b| / max_val)
+
+        Examples (max_val = 10.0):
+          3%  vs 3.5% →  1 − 0.5/10  = 0.95   (very similar)
+          3%  vs 10%  →  1 − 7.0/10  = 0.30   (quite different)
+          0%  vs 10%  →  1 − 10/10   = 0.00   (maximally different)
+
+        Edge cases:
+          Either value is None (unknown)  → 0.0
+          max_val is 0 (all countries 0%) → 1.0 (all identical)
+        """
+        a = SimilarityMatrixBuilder._parse_water_percent(val_a)
+        b = SimilarityMatrixBuilder._parse_water_percent(val_b)
+
+        # Unknown value → cannot compare
+        if a is None or b is None:
+            return 0.0
+
+        # All countries have 0% water → they are all identical
+        if max_val <= 0.0:
+            return 1.0
+
+        return max(0.0, 1.0 - abs(a - b) / max_val)
 
     # ── Currency ────────────────────────────────────────────────────────
 
@@ -458,11 +611,15 @@ class SimilarityMatrixBuilder:
 
     def _feature_similarity(self, val_a: str, val_b: str,
                             group: str,
-                            shared_by_group: Dict[str, set]) -> float:
+                            shared_by_group: Dict[str, set],
+                            water_max_val: float = 0.0) -> float:
         """
         Compute similarity for one feature, routing to the right method.
 
-        Currency  -> three-level on primary ISO code
+        Currency         -> three-level on primary ISO code
+        Numerical        -> log-ratio similarity (density, area, GDP, ...)
+        Water (%)        -> percentage similarity  max(0, 1 - |a-b| / max_val)
+                           where max_val is the highest water % in the dataset
         Language / other -> three-level on item sets
         """
         shared = shared_by_group.get(group, set())
@@ -482,6 +639,10 @@ class SimilarityMatrixBuilder:
         if group in self._NUMERICAL_GROUPS:
             return self._numerical_similarity(val_a, val_b)
 
+        # ── Bounded percentage fields (water %) ───────────────────────
+        if group in self._PERCENTAGE_GROUPS:
+            return self._water_percent_similarity(val_a, val_b, water_max_val)
+
         set_a = self._extract_item_set(val_a)
         set_b = self._extract_item_set(val_b)
         return self._three_level_similarity(set_a, set_b, shared)
@@ -490,7 +651,8 @@ class SimilarityMatrixBuilder:
 
     def _selected_feature_similarity(self, country_a: Dict, country_b: Dict,
                                      selected_features: List[str],
-                                     shared_by_group: Dict[str, set] = None
+                                     shared_by_group: Dict[str, set] = None,
+                                     water_max_val: float = 0.0
                                      ) -> Optional[float]:
         """
         Compute feature-level similarity by comparing VALUES, not field titles.
@@ -511,6 +673,9 @@ class SimilarityMatrixBuilder:
             (language + religion: partial overlap in either dimension still
             signals meaningful similarity)
           - Mixed numerical + categorical → return MEAN (default)
+
+        water_max_val: the highest water % in the current dataset, pre-computed
+          by the caller so all pairs use the same denominator.
 
         Returns None only when no features are provided, falling back to TED.
         """
@@ -534,7 +699,8 @@ class SimilarityMatrixBuilder:
             groups.append(group)
 
             scores.append(self._feature_similarity(
-                val_a, val_b, group, shared_by_group))
+                val_a, val_b, group, shared_by_group,
+                water_max_val=water_max_val))
 
         if not scores:
             return None
@@ -544,7 +710,11 @@ class SimilarityMatrixBuilder:
             return scores[0]
 
         # Multiple features: choose aggregation based on feature types
-        all_numerical = all(g in self._NUMERICAL_GROUPS for g in groups)
+        # Percentage groups (water) count as numerical for MIN aggregation
+        all_numerical = all(
+            g in self._NUMERICAL_GROUPS or g in self._PERCENTAGE_GROUPS
+            for g in groups
+        )
         if all_numerical:
             # MIN: country pair must be close in ALL numerical dimensions
             return min(scores)
@@ -621,6 +791,31 @@ class SimilarityMatrixBuilder:
             selected_features
         )
 
+        # ── Pre-compute water max value (dynamic denominator) ─────────────────
+        # Water % similarity divides by the highest observed value in this
+        # dataset so differences are judged against the realistic range,
+        # not the theoretical 0-100 range. Computed once here so every pair
+        # uses the same denominator (consistent, reproducible scores).
+        water_max_val = 0.0
+        if selected_features and any(
+            self._canonical_group(f) == 'water' for f in selected_features
+        ):
+            water_vals = []
+            for name in country_names:
+                doc = self.db.get_country(name)
+                if not doc:
+                    continue
+                fields = doc.get('fields', {}) or {}
+                for f in selected_features:
+                    if self._canonical_group(f) == 'water':
+                        raw = self._collect_group_values(fields, f)
+                        if raw:
+                            parsed = self._parse_water_percent(raw)
+                            if parsed is not None:
+                                water_vals.append(parsed)
+            water_max_val = max(water_vals) if water_vals else 0.0
+            print(f"[Matrix] Water % max value across dataset: {water_max_val:.4f}")
+
         total_pairs = n * (n - 1) // 2
         done = 0
 
@@ -640,7 +835,8 @@ class SimilarityMatrixBuilder:
 
                     if data_i and data_j:
                         special_sim = self._selected_feature_similarity(
-                            data_i, data_j, selected_features, shared_by_group
+                            data_i, data_j, selected_features, shared_by_group,
+                            water_max_val=water_max_val
                         )
                         if special_sim is not None:
                             sim = special_sim
