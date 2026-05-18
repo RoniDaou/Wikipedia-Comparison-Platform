@@ -174,6 +174,15 @@ const PRESETS = {
     "Slovakia",
     "Slovenia",
     "Russia",
+    "San Marino",
+    "Vatican City",
+    "Malta",
+    "Turkey",
+    "Republic of Ireland",
+    "Cyprus",
+    "Luxembourg",
+    "Liechtenstein",
+    "Monaco",
   ],
   asia: [
     "China",
@@ -406,10 +415,6 @@ function updateEstimate() {
   const secs = Math.round(pairs * SECS_PER_PAIR);
   const display =
     secs < 60
-      ? `~${secs} seconds`
-      : secs < 3600
-        ? `~${Math.round(secs / 60)} minutes`
-        : `~${(secs / 3600).toFixed(1)} hours`;
 
   if (n <= 30) {
     banner.className = "estimate-banner";
