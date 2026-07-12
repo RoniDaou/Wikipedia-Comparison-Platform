@@ -1442,4 +1442,15 @@ if __name__ == '__main__':
     print("               4 (edit script) · 5-6 (patch)")
     print("               Project 2: clustering")
     print("=" * 50)
-    app.run(debug=False, host='0.0.0.0', port=5000)
+    import os
+
+if __name__ == "__main__":
+    print("=" * 50)
+    print("Wikipedia Infobox Scraper API v2.0")
+    print("=" * 50)
+
+    app.run(
+        host="0.0.0.0",
+        port=int(os.environ.get("PORT", 5000)),
+        debug=False
+    )

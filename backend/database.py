@@ -3,7 +3,10 @@ MongoDB Database Handler
 Manages storage and retrieval of country infobox data
 Project 2: stores MULTIPLE similarity matrices and cluster results (never overrides)
 """
+import os
+from dotenv import load_dotenv
 
+load_dotenv()
 from pymongo import MongoClient, ASCENDING, DESCENDING
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
@@ -16,7 +19,10 @@ from bson import ObjectId
 class WikipediaDatabase:
     """Handles MongoDB operations for Wikipedia infobox data"""
 
-    def __init__(self, connection_string: str = "mongodb://localhost:27017/"):
+    def __init__(self, connection_string=None):
+        if connection_string is None:
+            connection_string = os.getenv("MONGO_URI")
+        self.client = MongoClient(connection_string)
         self.client = MongoClient(connection_string)
         self.db = self.client['wikipedia_scraper']
         self.countries_collection   = self.db['countries']
