@@ -18,7 +18,7 @@
      GET    /api/statistics                         — DB stats
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const API = "http://localhost:5000";
+const API = "https://wikipedia-scraper-35tw.onrender.com";
 
 /* ── App state ───────────────────────────────────────────────────────────── */
 const State = {
@@ -413,8 +413,7 @@ function updateEstimate() {
 
   const pairs = (n * (n - 1)) / 2;
   const secs = Math.round(pairs * SECS_PER_PAIR);
-  const display =
-    secs < 60
+  const display = secs < 60;
 
   if (n <= 30) {
     banner.className = "estimate-banner";
@@ -932,7 +931,6 @@ function renderPairsTable(containerId, pairs) {
    CLUSTERING — Algorithm selection
 ══════════════════════════════════════════════════════════════════════════ */
 
-
 function toggleAutoCut() {
   const auto = document.getElementById("agg-auto-cut")?.checked;
   const wrap = document.getElementById("agg-n-clusters-wrap");
@@ -1088,7 +1086,8 @@ async function runClustering() {
     const autoCut = document.getElementById("agg-auto-cut")?.checked;
     body.auto_cut = !!autoCut;
     if (!autoCut) {
-      body.n_clusters = parseInt(document.getElementById("agg-n-clusters").value) || 3;
+      body.n_clusters =
+        parseInt(document.getElementById("agg-n-clusters").value) || 3;
     }
     body.linkage = document.getElementById("agg-linkage").value || "average";
   }
@@ -1224,25 +1223,28 @@ function showAgglomerativeOnlyMessage(container, viewName) {
 // Lets the user drag the cut line up/down to interactively choose n_clusters.
 // Recomputes cluster assignments live from merge_history without a server call.
 function initDendrogramCutLine(uid, result) {
-  const wrap       = document.getElementById(uid + '_wrap');
-  const svg        = document.getElementById(uid + '_svg');
-  const cutLineEl  = document.getElementById(uid + '_cutline');
-  const hitEl      = document.getElementById(uid + '_cutline_hit');
-  const cutLabelEl = document.getElementById(uid + '_cutlabel');
-  const cutInfoEl  = document.getElementById(uid + '_cutinfo');
+  const wrap = document.getElementById(uid + "_wrap");
+  const svg = document.getElementById(uid + "_svg");
+  const cutLineEl = document.getElementById(uid + "_cutline");
+  const hitEl = document.getElementById(uid + "_cutline_hit");
+  const cutLabelEl = document.getElementById(uid + "_cutlabel");
+  const cutInfoEl = document.getElementById(uid + "_cutinfo");
   if (!wrap || !svg || !cutLineEl) return;
 
   const history = result.merge_history || result.dendrogram || [];
   if (!history.length) return;
 
-  const vb = svg.getAttribute('viewBox').split(' ').map(Number);
+  const vb = svg.getAttribute("viewBox").split(" ").map(Number);
   const svgH = vb[3];
 
   // Must mirror layout constants from buildDendrogramSvg exactly
   const margin = { top: 55, right: 70, bottom: 130, left: 80 };
-  const baselineY  = svgH - margin.bottom;
+  const baselineY = svgH - margin.bottom;
   const plotHeight = baselineY - margin.top;
-  const maxDist    = Math.max(...history.map(m => Number(m.distance) || 0), 1e-9);
+  const maxDist = Math.max(
+    ...history.map((m) => Number(m.distance) || 0),
+    1e-9,
+  );
 
   // yScale (same formula as buildDendrogramSvg):
   //   dist=0       → y = baselineY       (bottom, similarity=1.0)
@@ -1253,21 +1255,25 @@ function initDendrogramCutLine(uid, result) {
 
   // Inverse: SVG y → distance
   function svgYToDistance(svgY) {
-    return Math.max(0, Math.min(maxDist,
-      (baselineY - svgY) / (plotHeight * 0.95) * maxDist));
+    return Math.max(
+      0,
+      Math.min(maxDist, ((baselineY - svgY) / (plotHeight * 0.95)) * maxDist),
+    );
   }
 
   // How many clusters does cutting at this distance threshold produce?
   function distanceToClusters(threshold) {
-    const mergesDone = history.filter(m => Number(m.distance) <= threshold).length;
+    const mergesDone = history.filter(
+      (m) => Number(m.distance) <= threshold,
+    ).length;
     return Math.max(1, history.length + 1 - mergesDone);
   }
 
   // Convert clientY (page pixels) → SVG coordinate space, respecting zoom/pan
   function clientYToSvgY(clientY) {
     const wrapRect = wrap.getBoundingClientRect();
-    const scale = parseFloat(svg.dataset.scale || '1') || 1;
-    const ty    = parseFloat(svg.dataset.ty    || '0') || 0;
+    const scale = parseFloat(svg.dataset.scale || "1") || 1;
+    const ty = parseFloat(svg.dataset.ty || "0") || 0;
     return (clientY - wrapRect.top - ty) / scale;
   }
 
@@ -1275,8 +1281,8 @@ function initDendrogramCutLine(uid, result) {
   const cutStep = result.cut_step || 0;
   let initDist;
   if (cutStep > 0 && cutStep <= history.length) {
-    const lastKept    = Number(history[cutStep - 1]?.distance) || 0;
-    const firstDropped = Number(history[cutStep]?.distance)   || maxDist;
+    const lastKept = Number(history[cutStep - 1]?.distance) || 0;
+    const firstDropped = Number(history[cutStep]?.distance) || maxDist;
     initDist = (lastKept + firstDropped) / 2;
   } else {
     initDist = maxDist * 0.5;
@@ -1287,86 +1293,104 @@ function initDendrogramCutLine(uid, result) {
 
   function updateCutLine(dist) {
     currentDist = Math.max(0, Math.min(maxDist, dist));
-    const svgY     = distanceToSvgY(currentDist);
+    const svgY = distanceToSvgY(currentDist);
     const nClusters = distanceToClusters(currentDist);
-    const sim      = (1 - currentDist).toFixed(3);
+    const sim = (1 - currentDist).toFixed(3);
 
     // Move visible line and transparent hit area
-    cutLineEl.setAttribute('y1', svgY);
-    cutLineEl.setAttribute('y2', svgY);
-    if (hitEl) { hitEl.setAttribute('y1', svgY); hitEl.setAttribute('y2', svgY); }
+    cutLineEl.setAttribute("y1", svgY);
+    cutLineEl.setAttribute("y2", svgY);
+    if (hitEl) {
+      hitEl.setAttribute("y1", svgY);
+      hitEl.setAttribute("y2", svgY);
+    }
     if (cutLabelEl) {
-      cutLabelEl.setAttribute('y', svgY - 8);
-      cutLabelEl.textContent = `cut: ${nClusters} cluster${nClusters !== 1 ? 's' : ''} (sim ≥ ${sim})`;
+      cutLabelEl.setAttribute("y", svgY - 8);
+      cutLabelEl.textContent = `cut: ${nClusters} cluster${nClusters !== 1 ? "s" : ""} (sim ≥ ${sim})`;
     }
     if (cutInfoEl) {
-      cutInfoEl.textContent = `${nClusters} cluster${nClusters !== 1 ? 's' : ''} · similarity threshold: ${sim}`;
+      cutInfoEl.textContent = `${nClusters} cluster${nClusters !== 1 ? "s" : ""} · similarity threshold: ${sim}`;
     }
   }
 
   // Attach drag to the HIT AREA (not cutLineEl which has pointer-events:none)
   const dragTarget = hitEl || cutLineEl;
 
-  dragTarget.addEventListener('mousedown', function(e) {
+  dragTarget.addEventListener("mousedown", function (e) {
     dragging = true;
     e.stopPropagation();
     e.preventDefault();
-    document.body.style.cursor = 'ns-resize';
+    document.body.style.cursor = "ns-resize";
   });
 
-  window.addEventListener('mousemove', function(e) {
+  window.addEventListener("mousemove", function (e) {
     if (!dragging) return;
     updateCutLine(svgYToDistance(clientYToSvgY(e.clientY)));
   });
 
-  window.addEventListener('mouseup', function() {
+  window.addEventListener("mouseup", function () {
     if (!dragging) return;
     dragging = false;
-    document.body.style.cursor = '';
-    wrap.style.cursor = 'grab';
+    document.body.style.cursor = "";
+    wrap.style.cursor = "grab";
   });
 
-  dragTarget.addEventListener('touchstart', function(e) {
-    dragging = true;
-    e.stopPropagation();
-  }, { passive: true });
-  window.addEventListener('touchmove', function(e) {
-    if (!dragging) return;
-    updateCutLine(svgYToDistance(clientYToSvgY(e.touches[0].clientY)));
-  }, { passive: true });
-  window.addEventListener('touchend', function() { dragging = false; });
+  dragTarget.addEventListener(
+    "touchstart",
+    function (e) {
+      dragging = true;
+      e.stopPropagation();
+    },
+    { passive: true },
+  );
+  window.addEventListener(
+    "touchmove",
+    function (e) {
+      if (!dragging) return;
+      updateCutLine(svgYToDistance(clientYToSvgY(e.touches[0].clientY)));
+    },
+    { passive: true },
+  );
+  window.addEventListener("touchend", function () {
+    dragging = false;
+  });
 
   // Set initial position
   updateCutLine(currentDist);
 
   // Apply Cut button
-  const applyBtn = document.getElementById(uid + '_applycut');
+  const applyBtn = document.getElementById(uid + "_applycut");
 
   if (applyBtn) {
-    applyBtn.addEventListener('click', async function() {
+    applyBtn.addEventListener("click", async function () {
       const resultId = State.lastResult?._id;
       if (!resultId) {
-        alert('No saved result to recut. Run the clustering first.');
+        alert("No saved result to recut. Run the clustering first.");
         return;
       }
 
-      const newCutStep = history.filter(m => Number(m.distance) <= currentDist).length;
+      const newCutStep = history.filter(
+        (m) => Number(m.distance) <= currentDist,
+      ).length;
 
       applyBtn.disabled = true;
-      applyBtn.textContent = '⏳ Applying…';
+      applyBtn.textContent = "⏳ Applying…";
 
       // Hide save banner while applying
-      const banner = document.getElementById('recut-save-banner');
-      if (banner) banner.style.display = 'none';
+      const banner = document.getElementById("recut-save-banner");
+      if (banner) banner.style.display = "none";
 
       try {
         const res = await fetch(`${API}/api/cluster/recut`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ result_id: resultId, cut_step: newCutStep })
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ result_id: resultId, cut_step: newCutStep }),
         });
         const data = await res.json();
-        if (!data.success) { alert('Recut failed: ' + data.error); return; }
+        if (!data.success) {
+          alert("Recut failed: " + data.error);
+          return;
+        }
 
         State.lastResult = data.result;
         renderResult(data.result);
@@ -1374,10 +1398,10 @@ function initDendrogramCutLine(uid, result) {
         // Show the permanent save banner (in cluster.html) with stored cut info
         showRecutSaveBanner(data.result, resultId, newCutStep);
       } catch (err) {
-        alert('Recut error: ' + err.message);
+        alert("Recut error: " + err.message);
       } finally {
         applyBtn.disabled = false;
-        applyBtn.textContent = '✓ Apply Cut';
+        applyBtn.textContent = "✓ Apply Cut";
       }
     });
   }
@@ -1385,20 +1409,22 @@ function initDendrogramCutLine(uid, result) {
 
 // ── Recut save banner (permanent element in cluster.html) ─────────────────
 function showRecutSaveBanner(recutResult, originalResultId, cutStep) {
-  const banner    = document.getElementById('recut-save-banner');
-  const saveBtn   = document.getElementById('recut-save-btn');
-  const dismissBtn= document.getElementById('recut-dismiss-btn');
-  const nameInput = document.getElementById('recut-save-name');
+  const banner = document.getElementById("recut-save-banner");
+  const saveBtn = document.getElementById("recut-save-btn");
+  const dismissBtn = document.getElementById("recut-dismiss-btn");
+  const nameInput = document.getElementById("recut-save-name");
   if (!banner) return;
 
   // Clear previous name
-  if (nameInput) nameInput.value = '';
+  if (nameInput) nameInput.value = "";
 
-  banner.style.display = 'flex';
+  banner.style.display = "flex";
 
   // Dismiss
   if (dismissBtn) {
-    dismissBtn.onclick = () => { banner.style.display = 'none'; };
+    dismissBtn.onclick = () => {
+      banner.style.display = "none";
+    };
   }
 
   // Save
@@ -1407,34 +1433,37 @@ function showRecutSaveBanner(recutResult, originalResultId, cutStep) {
     const newSaveBtn = saveBtn.cloneNode(true);
     saveBtn.parentNode.replaceChild(newSaveBtn, saveBtn);
 
-    newSaveBtn.addEventListener('click', async function() {
-      const saveName = nameInput ? nameInput.value.trim() : '';
+    newSaveBtn.addEventListener("click", async function () {
+      const saveName = nameInput ? nameInput.value.trim() : "";
       newSaveBtn.disabled = true;
-      newSaveBtn.textContent = '⏳ Saving…';
+      newSaveBtn.textContent = "⏳ Saving…";
 
       try {
         const res = await fetch(`${API}/api/cluster/recut`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             result_id: originalResultId,
-            cut_step:  cutStep,
-            save:      true,
-            save_name: saveName
-          })
+            cut_step: cutStep,
+            save: true,
+            save_name: saveName,
+          }),
         });
         const data = await res.json();
-        if (!data.success) { alert('Save failed: ' + data.error); return; }
+        if (!data.success) {
+          alert("Save failed: " + data.error);
+          return;
+        }
 
         State.lastResult = data.result;
-        banner.style.display = 'none';
-        if (typeof loadResultsList === 'function') loadResultsList();
-        alert(`✓ Saved as "${saveName || 'recut result'}" in database.`);
+        banner.style.display = "none";
+        if (typeof loadResultsList === "function") loadResultsList();
+        alert(`✓ Saved as "${saveName || "recut result"}" in database.`);
       } catch (err) {
-        alert('Save error: ' + err.message);
+        alert("Save error: " + err.message);
       } finally {
         newSaveBtn.disabled = false;
-        newSaveBtn.textContent = '💾 Save to Database';
+        newSaveBtn.textContent = "💾 Save to Database";
       }
     });
   }
@@ -1442,18 +1471,25 @@ function showRecutSaveBanner(recutResult, originalResultId, cutStep) {
 
 // ── Dendrogram zoom / pan — called after innerHTML is set ────────────────────
 function initDendrogramZoom(uid) {
-  const wrap = document.getElementById(uid + '_wrap');
-  const svg  = document.getElementById(uid + '_svg');
-  const btnIn  = document.getElementById(uid + '_zoomin');
-  const btnOut = document.getElementById(uid + '_zoomout');
-  const btnRst = document.getElementById(uid + '_reset');
+  const wrap = document.getElementById(uid + "_wrap");
+  const svg = document.getElementById(uid + "_svg");
+  const btnIn = document.getElementById(uid + "_zoomin");
+  const btnOut = document.getElementById(uid + "_zoomout");
+  const btnRst = document.getElementById(uid + "_reset");
   if (!wrap || !svg) return;
 
-  let scale = 1, tx = 0, ty = 0;
-  let dragging = false, startX = 0, startY = 0, startTx = 0, startTy = 0;
+  let scale = 1,
+    tx = 0,
+    ty = 0;
+  let dragging = false,
+    startX = 0,
+    startY = 0,
+    startTx = 0,
+    startTy = 0;
 
   function apply() {
-    svg.style.transform = 'translate(' + tx + 'px,' + ty + 'px) scale(' + scale + ')';
+    svg.style.transform =
+      "translate(" + tx + "px," + ty + "px) scale(" + scale + ")";
   }
 
   function zoomBy(factor, cx, cy) {
@@ -1467,66 +1503,101 @@ function initDendrogramZoom(uid) {
   }
 
   // Toolbar buttons
-  if (btnIn)  btnIn.addEventListener('click',  function() { zoomBy(1.3); });
-  if (btnOut) btnOut.addEventListener('click', function() { zoomBy(0.75); });
-  if (btnRst) btnRst.addEventListener('click', function() {
-    scale = 1; tx = 0; ty = 0;
-    svg.style.transform = '';
-  });
+  if (btnIn)
+    btnIn.addEventListener("click", function () {
+      zoomBy(1.3);
+    });
+  if (btnOut)
+    btnOut.addEventListener("click", function () {
+      zoomBy(0.75);
+    });
+  if (btnRst)
+    btnRst.addEventListener("click", function () {
+      scale = 1;
+      tx = 0;
+      ty = 0;
+      svg.style.transform = "";
+    });
 
   // Scroll to zoom (centered on mouse cursor)
-  wrap.addEventListener('wheel', function(e) {
-    e.preventDefault();
-    const rect = wrap.getBoundingClientRect();
-    zoomBy(e.deltaY < 0 ? 1.15 : 0.87, e.clientX - rect.left, e.clientY - rect.top);
-  }, { passive: false });
+  wrap.addEventListener(
+    "wheel",
+    function (e) {
+      e.preventDefault();
+      const rect = wrap.getBoundingClientRect();
+      zoomBy(
+        e.deltaY < 0 ? 1.15 : 0.87,
+        e.clientX - rect.left,
+        e.clientY - rect.top,
+      );
+    },
+    { passive: false },
+  );
 
   // Mouse drag to pan
-  wrap.addEventListener('mousedown', function(e) {
+  wrap.addEventListener("mousedown", function (e) {
     dragging = true;
-    wrap.style.cursor = 'grabbing';
-    startX = e.clientX; startY = e.clientY;
-    startTx = tx; startTy = ty;
+    wrap.style.cursor = "grabbing";
+    startX = e.clientX;
+    startY = e.clientY;
+    startTx = tx;
+    startTy = ty;
     e.preventDefault();
   });
-  window.addEventListener('mousemove', function(e) {
+  window.addEventListener("mousemove", function (e) {
     if (!dragging) return;
     tx = startTx + (e.clientX - startX);
     ty = startTy + (e.clientY - startY);
     apply();
   });
-  window.addEventListener('mouseup', function() {
-    if (dragging) { dragging = false; wrap.style.cursor = 'grab'; }
+  window.addEventListener("mouseup", function () {
+    if (dragging) {
+      dragging = false;
+      wrap.style.cursor = "grab";
+    }
   });
 
   // Touch: single-finger pan, two-finger pinch zoom
   let lastTouchDist = null;
-  wrap.addEventListener('touchstart', function(e) {
-    if (e.touches.length === 1) {
-      dragging = true;
-      startX = e.touches[0].clientX; startY = e.touches[0].clientY;
-      startTx = tx; startTy = ty;
-    } else if (e.touches.length === 2) {
-      lastTouchDist = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY);
-    }
-  }, { passive: true });
-  wrap.addEventListener('touchmove', function(e) {
-    if (e.touches.length === 1 && dragging) {
-      tx = startTx + (e.touches[0].clientX - startX);
-      ty = startTy + (e.touches[0].clientY - startY);
-      apply();
-    } else if (e.touches.length === 2 && lastTouchDist != null) {
-      const d = Math.hypot(
-        e.touches[0].clientX - e.touches[1].clientX,
-        e.touches[0].clientY - e.touches[1].clientY);
-      zoomBy(d / lastTouchDist);
-      lastTouchDist = d;
-    }
-  }, { passive: true });
-  wrap.addEventListener('touchend', function() {
-    dragging = false; lastTouchDist = null;
+  wrap.addEventListener(
+    "touchstart",
+    function (e) {
+      if (e.touches.length === 1) {
+        dragging = true;
+        startX = e.touches[0].clientX;
+        startY = e.touches[0].clientY;
+        startTx = tx;
+        startTy = ty;
+      } else if (e.touches.length === 2) {
+        lastTouchDist = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+      }
+    },
+    { passive: true },
+  );
+  wrap.addEventListener(
+    "touchmove",
+    function (e) {
+      if (e.touches.length === 1 && dragging) {
+        tx = startTx + (e.touches[0].clientX - startX);
+        ty = startTy + (e.touches[0].clientY - startY);
+        apply();
+      } else if (e.touches.length === 2 && lastTouchDist != null) {
+        const d = Math.hypot(
+          e.touches[0].clientX - e.touches[1].clientX,
+          e.touches[0].clientY - e.touches[1].clientY,
+        );
+        zoomBy(d / lastTouchDist);
+        lastTouchDist = d;
+      }
+    },
+    { passive: true },
+  );
+  wrap.addEventListener("touchend", function () {
+    dragging = false;
+    lastTouchDist = null;
   });
 }
 
@@ -1730,7 +1801,7 @@ function buildDendrogramSvg(result, history) {
   {
     const cutY = nextMerge
       ? ((cutMerge?._displayY ?? baselineY) + nextMerge._displayY) / 2
-      : cutMerge?._displayY ?? yScale(maxDist * 0.5);
+      : (cutMerge?._displayY ?? yScale(maxDist * 0.5));
     // Thicker transparent hit area makes the line easy to grab
     parts.push(
       `<line id="${uid}_cutline_hit"
@@ -1775,7 +1846,8 @@ function buildDendrogramSvg(result, history) {
     `<text x="${margin.left - 52}" y="${margin.top + plotHeight / 2}" class="dendro-axis-title" text-anchor="middle" transform="rotate(-90 ${margin.left - 52} ${margin.top + plotHeight / 2})">Similarity</text>`,
   );
 
-  return `
+  return (
+    `
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:6px;padding:8px 12px;background:#f8f5ff;border:1px solid #c4b5fd;border-radius:6px;flex-wrap:wrap;">
       <span style="font-size:0.8rem;">🖱 <strong>Drag the cut line</strong> up/down to change the number of clusters</span>
       <span id="${uid}_cutinfo" style="font-size:0.82rem;font-weight:600;color:#5b21b6;"></span>
@@ -1795,9 +1867,10 @@ function buildDendrogramSvg(result, history) {
            role="img" aria-label="Agglomerative hierarchical dendrogram">
         ${parts.join("")}
       </svg>
-    </div>`
+    </div>` +
     // NOTE: zoom/pan JS is wired up by initDendrogramZoom() called after innerHTML is set
-    + `<!-- uid:${uid} -->`;
+    `<!-- uid:${uid} -->`
+  );
 }
 
 function getDendrogramCountryOrder(result, history) {
@@ -2435,9 +2508,10 @@ async function renderHeatmap() {
     '<p style="color:var(--ink-soft);padding:16px">Loading heatmap…</p>';
 
   /* Always load the matrix that belongs to THIS result to get real scores. */
-  const needsFetch = !State.fullMatrix
-    || !State.fullMatrix.matrix          // no actual cell data
-    || (result.matrix_id && State.fullMatrix._id !== result.matrix_id);
+  const needsFetch =
+    !State.fullMatrix ||
+    !State.fullMatrix.matrix || // no actual cell data
+    (result.matrix_id && State.fullMatrix._id !== result.matrix_id);
 
   if (needsFetch && result.matrix_id) {
     try {
@@ -2497,9 +2571,10 @@ async function renderHeatmap() {
       } else {
         const ri = matrixIndex.get(countries[row]);
         const ci = matrixIndex.get(countries[col]);
-        sim = (ri !== undefined && ci !== undefined)
-          ? (State.fullMatrix.matrix[ri][ci] ?? 0)
-          : 0;
+        sim =
+          ri !== undefined && ci !== undefined
+            ? (State.fullMatrix.matrix[ri][ci] ?? 0)
+            : 0;
       }
       ctx.fillStyle = simToColor(sim);
       ctx.fillRect(PAD + col * CELL, PAD + row * CELL, CELL - 1, CELL - 1);

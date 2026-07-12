@@ -1,4 +1,4 @@
-const API_BASE = "http://localhost:5000/api";
+const API_BASE = "https://wikipedia-scraper-35tw.onrender.com/api";
 
 // ─────────────────────────────────────────────
 //  State
@@ -565,7 +565,7 @@ async function loadCountriesForComparison() {
     const [countriesRes, comparisonsRes, editedRes] = await Promise.all([
       fetch(`${API_BASE}/countries`),
       fetch(`${API_BASE}/comparisons`),
-      fetch(`${API_BASE}/edited-countries`)
+      fetch(`${API_BASE}/edited-countries`),
     ]);
 
     const countriesData = await countriesRes.json();
@@ -574,43 +574,49 @@ async function loadCountriesForComparison() {
 
     if (countriesData.success) {
       const allOptions = [];
-      
+
       // Add original countries
       if (countriesData.countries) {
-        allOptions.push(...countriesData.countries.map(c => ({
-          name: c,
-          type: 'country',
-          label: `${formatCountryName(c)}`
-        })));
+        allOptions.push(
+          ...countriesData.countries.map((c) => ({
+            name: c,
+            type: "country",
+            label: `${formatCountryName(c)}`,
+          })),
+        );
       }
-      
+
       // Add saved comparisons
       if (comparisonsData.success && comparisonsData.comparisons) {
-        allOptions.push(...comparisonsData.comparisons.map(c => ({
-          name: c,
-          type: 'comparison',
-          label: `${formatCountryName(c)}`
-        })));
+        allOptions.push(
+          ...comparisonsData.comparisons.map((c) => ({
+            name: c,
+            type: "comparison",
+            label: `${formatCountryName(c)}`,
+          })),
+        );
       }
 
       // ✅ FIX: Handle edited countries (API returns array directly)
       if (Array.isArray(editedData) && editedData.length > 0) {
         // editedData is an array of country objects with country_name field
-        allOptions.push(...editedData.map(countryObj => {
-          const countryName = countryObj.country_name || 'Unknown';
-          return {
-            name: countryName,
-            type: 'edited',
-            label: `${formatCountryName(countryName)} [EDITED]`
-          };
-        }));
+        allOptions.push(
+          ...editedData.map((countryObj) => {
+            const countryName = countryObj.country_name || "Unknown";
+            return {
+              name: countryName,
+              type: "edited",
+              label: `${formatCountryName(countryName)} [EDITED]`,
+            };
+          }),
+        );
       }
 
       // Sort all options alphabetically by name
       allOptions.sort((a, b) => a.name.localeCompare(b.name));
 
       // Populate both dropdowns
-      ['country1-select', 'country2-select'].forEach((id) => {
+      ["country1-select", "country2-select"].forEach((id) => {
         const sel = document.getElementById(id);
         sel.innerHTML = '<option value="">-- Select Country --</option>';
 
@@ -628,36 +634,36 @@ async function loadCountriesForComparison() {
 }
 
 function enableDropdownLetterJump() {
-  ['country1-select', 'country2-select'].forEach((id) => {
+  ["country1-select", "country2-select"].forEach((id) => {
     const select = document.getElementById(id);
     if (select) {
       // Remove old listeners first
       select.replaceWith(select.cloneNode(true));
       const newSelect = document.getElementById(id);
-      
-      newSelect.addEventListener('keypress', function(e) {
+
+      newSelect.addEventListener("keypress", function (e) {
         const key = e.key.toUpperCase();
-        
+
         // Only handle letter keys (A-Z)
         if (/^[A-Z]$/.test(key)) {
           e.preventDefault();
-          
+
           let startIndex = this.selectedIndex + 1;
           if (startIndex >= this.options.length) startIndex = 1;
-          
+
           // Find first option starting with this letter
           for (let i = startIndex; i < this.options.length; i++) {
             const optionText = this.options[i].text.toUpperCase();
-            if (optionText.startsWith(key) || optionText.includes(' ' + key)) {
+            if (optionText.startsWith(key) || optionText.includes(" " + key)) {
               this.selectedIndex = i;
               return;
             }
           }
-          
+
           // If not found, search from beginning
           for (let i = 1; i < startIndex; i++) {
             const optionText = this.options[i].text.toUpperCase();
-            if (optionText.startsWith(key) || optionText.includes(' ' + key)) {
+            if (optionText.startsWith(key) || optionText.includes(" " + key)) {
               this.selectedIndex = i;
               return;
             }
@@ -769,7 +775,7 @@ async function compareCountries() {
         else if (type === "delete") acc.deletes++;
         return acc;
       },
-      { matches: 0, updates: 0, inserts: 0, deletes: 0 }
+      { matches: 0, updates: 0, inserts: 0, deletes: 0 },
     );
 
     const totalOperations =
@@ -788,7 +794,7 @@ async function compareCountries() {
       <tr>
         <td>${i + 1}</td>
         <td><span class="op-badge op-${type}">${escapeHtml(
-          type.toUpperCase() || "—"
+          type.toUpperCase() || "—",
         )}</span></td>
         <td><code>${escapeHtml(getOperationFieldLabel(op))}</code></td>
         <td class="val-cell">${escapeHtml(String(op.source?.value ?? "—"))}</td>
@@ -805,7 +811,7 @@ async function compareCountries() {
       <tr>
         <td>${i + 1}</td>
         <td><span class="op-badge op-${type}">${escapeHtml(
-          type.toUpperCase() || "—"
+          type.toUpperCase() || "—",
         )}</span></td>
         <td><code>${escapeHtml(getOperationFieldLabel(op))}</code></td>
         <td class="val-cell">${escapeHtml(String(op.source?.value ?? "—"))}</td>
@@ -871,8 +877,9 @@ async function compareCountries() {
     const tree2EditKey = country2Doc ? registerTreeImage(country2Doc) : null;
 
     // ───── TREE BUTTONS ─────
-    const tree1Button = tree1Obj && tree1Obj.label
-      ? `
+    const tree1Button =
+      tree1Obj && tree1Obj.label
+        ? `
         <div class="tree-preview-card">
           <p>Full tree available as image preview or interactive editor.</p>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -880,7 +887,7 @@ async function compareCountries() {
               type="button"
               class="btn btn-primary"
               onclick="openTreeImageModal('${tree1ViewKey}', '${escapeJsString(
-                formatCountryName(country1)
+                formatCountryName(country1),
               )} Tree')">
               🌳 View Full Tree
             </button>
@@ -891,7 +898,7 @@ async function compareCountries() {
               type="button"
               class="btn btn-secondary"
               onclick="openTreeEditModal('${tree1EditKey}', '${escapeJsString(
-                formatCountryName(country1)
+                formatCountryName(country1),
               )} Tree', '${escapeJsString(country1)}')">
               ✏️ Edit Tree
             </button>`
@@ -900,10 +907,11 @@ async function compareCountries() {
           </div>
         </div>
       `
-      : "<div class='tree-diagram-empty'>Tree unavailable</div>";
+        : "<div class='tree-diagram-empty'>Tree unavailable</div>";
 
-    const tree2Button = tree2Obj && tree2Obj.label
-      ? `
+    const tree2Button =
+      tree2Obj && tree2Obj.label
+        ? `
         <div class="tree-preview-card">
           <p>Full tree available as image preview or interactive editor.</p>
           <div style="display: flex; gap: 10px; flex-wrap: wrap;">
@@ -911,7 +919,7 @@ async function compareCountries() {
               type="button"
               class="btn btn-primary"
               onclick="openTreeImageModal('${tree2ViewKey}', '${escapeJsString(
-                formatCountryName(country2)
+                formatCountryName(country2),
               )} Tree')">
               🌳 View Full Tree
             </button>
@@ -922,7 +930,7 @@ async function compareCountries() {
               type="button"
               class="btn btn-secondary"
               onclick="openTreeEditModal('${tree2EditKey}', '${escapeJsString(
-                formatCountryName(country2)
+                formatCountryName(country2),
               )} Tree', '${escapeJsString(country2)}')">
               ✏️ Edit Tree
             </button>`
@@ -931,7 +939,7 @@ async function compareCountries() {
           </div>
         </div>
       `
-      : "<div class='tree-diagram-empty'>Tree unavailable</div>";
+        : "<div class='tree-diagram-empty'>Tree unavailable</div>";
 
     // ───── RENDER FINAL RESULT ─────
     resultDiv.innerHTML = `
@@ -985,7 +993,7 @@ async function compareCountries() {
               <div class="cmp-collapse-body">
                 ${renderCopyableJsonBlock(
                   `${formatCountryName(country1)} JSON`,
-                  country1Doc
+                  country1Doc,
                 )}
               </div>
             </details>
@@ -1004,7 +1012,7 @@ async function compareCountries() {
               <div class="cmp-collapse-body">
                 ${renderCopyableJsonBlock(
                   `${formatCountryName(country2)} JSON`,
-                  country2Doc
+                  country2Doc,
                 )}
               </div>
             </details>
@@ -1112,7 +1120,7 @@ async function compareCountries() {
     hideLoading();
     console.error(e);
     resultDiv.innerHTML = `<div class="error-message"><h3>❌ Error</h3><p>${escapeHtml(
-      e.message
+      e.message,
     )}</p></div>`;
   }
 }
@@ -1126,7 +1134,9 @@ async function patchCurrentComparison() {
   const { country1, country2 } = currentComparisonPatchState;
 
   const patchBtn = document.getElementById("patch-comparison-btn");
-  const patchOutputContainer = document.getElementById("patch-output-container");
+  const patchOutputContainer = document.getElementById(
+    "patch-output-container",
+  );
   const saveContainer = document.getElementById("save-comparison-container");
 
   if (patchBtn) {
@@ -1275,7 +1285,6 @@ async function patchCurrentComparison() {
       patchBtn.disabled = true;
       patchBtn.innerHTML = "✅ Patched";
     }
-
   } catch (e) {
     console.error(e);
 
@@ -1327,41 +1336,42 @@ async function saveComparisonResult(patchedJson) {
   const saveResultDiv = document.getElementById("save-result");
   const btn = document.getElementById("save-comparison-btn");
   const countryName = nameInput.value.trim();
-  
+
   if (!countryName) {
     saveResultDiv.style.display = "block";
     saveResultDiv.innerHTML = `<div class="error-message" style="padding: 10px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; color: #991b1b;">⚠️ Please enter a country name.</div>`;
     return;
   }
-  
+
   // Validate name: alphanumeric, underscores, hyphens, spaces allowed
   if (!/^[a-zA-Z0-9_\- ]+$/.test(countryName)) {
     saveResultDiv.style.display = "block";
     saveResultDiv.innerHTML = `<div class="error-message" style="padding: 10px; background: #fee2e2; border: 1px solid #fca5a5; border-radius: 6px; color: #991b1b;">⚠️ Name can only contain letters, numbers, underscores, hyphens, and spaces.</div>`;
     return;
   }
-  
+
   const originalText = btn.innerHTML;
   btn.disabled = true;
   btn.innerHTML = "⏳ Saving...";
-  
+
   try {
     // Ensure patchedJson is an object
-    const jsonData = typeof patchedJson === 'string' ? JSON.parse(patchedJson) : patchedJson;
-    
+    const jsonData =
+      typeof patchedJson === "string" ? JSON.parse(patchedJson) : patchedJson;
+
     const response = await fetch(`${API_BASE}/comparisons/save`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        country_name: countryName,  // Send as country_name
+        country_name: countryName, // Send as country_name
         patched_json: jsonData,
       }),
     });
-    
+
     const data = await response.json();
-    
+
     saveResultDiv.style.display = "block";
-    
+
     if (data.success) {
       saveResultDiv.innerHTML = `
         <div class="success-message" style="padding: 10px; background: #dcfce7; border: 1px solid #86efac; border-radius: 6px; color: #166534;">
@@ -1774,8 +1784,6 @@ async function downloadPatch(c1, c2, fmt) {
   a.click();
 }
 
-
-
 // ─────────────────────────────────────────────
 //  1 vs All Comparison
 // ──────────���──────────────────────────────────
@@ -1783,78 +1791,79 @@ async function downloadPatch(c1, c2, fmt) {
 let compareAllData = {
   baseCountry: null,
   allResults: [],
-  filteredResults: []
+  filteredResults: [],
 };
 
 async function populateBaseCountrySelect() {
   try {
-    const response = await fetch('http://localhost:5000/api/countries');
+    const response = await fetch("http://localhost:5000/api/countries");
     const data = await response.json();
-    
+
     if (data.success) {
-      const select = document.getElementById('base-country-select');
+      const select = document.getElementById("base-country-select");
       select.innerHTML = '<option value="">-- Select Country --</option>';
-      
-      data.countries.forEach(country => {
-        const option = document.createElement('option');
+
+      data.countries.forEach((country) => {
+        const option = document.createElement("option");
         option.value = country;
         option.textContent = country;
         select.appendChild(option);
       });
     }
   } catch (error) {
-    console.error('Error loading countries:', error);
+    console.error("Error loading countries:", error);
   }
 }
 
 async function startCompareAll() {
-  const baseCountrySelect = document.getElementById('base-country-select');
+  const baseCountrySelect = document.getElementById("base-country-select");
   const baseCountry = baseCountrySelect.value;
-  
+
   if (!baseCountry) {
-    alert('Please select a country');
+    alert("Please select a country");
     return;
   }
-  
+
   compareAllData.baseCountry = baseCountry;
-  
+
   // Show loading
-  const resultsContainer = document.getElementById('compare-all-results');
-  const loadingDiv = document.getElementById('compare-all-loading');
-  const tableContainer = document.getElementById('compare-all-table-container');
-  
-  resultsContainer.style.display = 'block';
-  loadingDiv.style.display = 'flex';
-  tableContainer.innerHTML = '';
-  
-  document.getElementById('compare-all-title').textContent = `Comparing "${baseCountry}" against all countries...`;
-  
+  const resultsContainer = document.getElementById("compare-all-results");
+  const loadingDiv = document.getElementById("compare-all-loading");
+  const tableContainer = document.getElementById("compare-all-table-container");
+
+  resultsContainer.style.display = "block";
+  loadingDiv.style.display = "flex";
+  tableContainer.innerHTML = "";
+
+  document.getElementById("compare-all-title").textContent =
+    `Comparing "${baseCountry}" against all countries...`;
+
   try {
-    const response = await fetch('http://localhost:5000/api/compare-all', {
-      method: 'POST',
+    const response = await fetch("http://localhost:5000/api/compare-all", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json'
+        "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        base_country: baseCountry
-      })
+        base_country: baseCountry,
+      }),
     });
-    
+
     const data = await response.json();
-    
+
     if (data.success) {
       compareAllData.allResults = data.results;
       compareAllData.filteredResults = [...data.results];
-      
+
       // Reset the limit select to "First 10"
-      document.getElementById('results-limit-select').value = '10';
-      
-      displayCompareAllResults('10');
-      
-      document.getElementById('compare-all-title').textContent = 
+      document.getElementById("results-limit-select").value = "10";
+
+      displayCompareAllResults("10");
+
+      document.getElementById("compare-all-title").textContent =
         `Results: "${baseCountry}" vs ${data.total_comparisons} countries`;
-      
-      loadingDiv.style.display = 'none';
+
+      loadingDiv.style.display = "none";
     } else {
       tableContainer.innerHTML = `
         <div class="error-message-compare-all">
@@ -1862,35 +1871,35 @@ async function startCompareAll() {
           <p>${data.error}</p>
         </div>
       `;
-      loadingDiv.style.display = 'none';
+      loadingDiv.style.display = "none";
     }
   } catch (error) {
-    console.error('Error during comparison:', error);
+    console.error("Error during comparison:", error);
     tableContainer.innerHTML = `
       <div class="error-message-compare-all">
         <h3>Error</h3>
         <p>${error.message}</p>
       </div>
     `;
-    loadingDiv.style.display = 'none';
+    loadingDiv.style.display = "none";
   }
 }
 
 function filterCompareAllResults() {
-  const limit = document.getElementById('results-limit-select').value;
+  const limit = document.getElementById("results-limit-select").value;
   displayCompareAllResults(limit);
 }
 
 function displayCompareAllResults(limit) {
-  const tableContainer = document.getElementById('compare-all-table-container');
-  
+  const tableContainer = document.getElementById("compare-all-table-container");
+
   let resultsToDisplay = compareAllData.allResults;
-  
-  if (limit !== 'all') {
+
+  if (limit !== "all") {
     const limitNum = parseInt(limit);
     resultsToDisplay = compareAllData.allResults.slice(0, limitNum);
   }
-  
+
   if (resultsToDisplay.length === 0) {
     tableContainer.innerHTML = `
       <div class="no-results-message">
@@ -1899,7 +1908,7 @@ function displayCompareAllResults(limit) {
     `;
     return;
   }
-  
+
   let tableHTML = `
     <div class="compare-all-table-wrapper">
       <table class="compare-all-table">
@@ -1913,12 +1922,12 @@ function displayCompareAllResults(limit) {
         </thead>
         <tbody>
   `;
-  
+
   resultsToDisplay.forEach((result, index) => {
     const similarity = (result.similarity * 100).toFixed(2);
     const tedDistance = Math.round(result.ted_distance);
     const barWidth = Math.max(5, similarity);
-    
+
     tableHTML += `
       <tr>
         <td class="rank">${index + 1}</td>
@@ -1933,7 +1942,7 @@ function displayCompareAllResults(limit) {
       </tr>
     `;
   });
-  
+
   tableHTML += `
         </tbody>
       </table>
@@ -1942,19 +1951,19 @@ function displayCompareAllResults(limit) {
       Showing ${resultsToDisplay.length} of ${compareAllData.allResults.length} results
     </div>
   `;
-  
+
   tableContainer.innerHTML = tableHTML;
 }
 
 // Initialize base country select when page loads
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener("DOMContentLoaded", function () {
   populateBaseCountrySelect();
 });
 
 // Update the compareAllCountries function to redirect from comparison tab
 function compareAllCountries() {
-  const navBtn = document.querySelectorAll('.nav-btn')[2]; // "1 vs All" is the 3rd button
-  openTab('compare-all', navBtn);
+  const navBtn = document.querySelectorAll(".nav-btn")[2]; // "1 vs All" is the 3rd button
+  openTab("compare-all", navBtn);
 }
 
 // ─────────────────────────────────────────────
@@ -2077,7 +2086,7 @@ async function loadCountryList() {
     const [countriesRes, comparisonsRes, editedRes] = await Promise.all([
       fetch(`${API_BASE}/countries`),
       fetch(`${API_BASE}/comparisons`),
-      fetch(`${API_BASE}/edited-countries`)
+      fetch(`${API_BASE}/edited-countries`),
     ]);
 
     const countriesData = await countriesRes.json();
@@ -2096,7 +2105,7 @@ async function loadCountryList() {
 
     // editedData is an array of objects -> convert to names
     if (Array.isArray(editedData)) {
-      allNames.push(...editedData.map(x => x.country_name).filter(Boolean));
+      allNames.push(...editedData.map((x) => x.country_name).filter(Boolean));
     }
 
     allNames = [...new Set(allNames)].sort((a, b) => a.localeCompare(b));
@@ -2152,7 +2161,9 @@ function showCountryModal(d) {
           hasNewlines
             ? fieldValue
                 .split("\n")
-                .map((l) => `<div class="hierarchy-line">${escapeHtml(l)}</div>`)
+                .map(
+                  (l) => `<div class="hierarchy-line">${escapeHtml(l)}</div>`,
+                )
                 .join("")
             : escapeHtml(fieldValue)
         }</td></tr>`;
@@ -2321,7 +2332,6 @@ function escapeJsString(text) {
 //  TREE EDITING MODAL
 // ─────────────────────────────────────────────
 
-
 // ─────────────────────────────────────────────
 //  TREE EDITING MODAL
 // ─────────────────────────────────────────────
@@ -2330,7 +2340,7 @@ let treeEditState = {
   currentTree: null,
   originalCountry: null,
   editedNodes: {},
-  selectedNode: null
+  selectedNode: null,
 };
 
 function openTreeEditModal(treeKey, title, originalCountry) {
@@ -2349,7 +2359,8 @@ function openTreeEditModal(treeKey, title, originalCountry) {
 
     const modal = document.getElementById("tree-edit-modal");
     document.getElementById("tree-edit-title").textContent = `Edit ${title}`;
-    document.getElementById("tree-edit-original").textContent = `From: ${originalCountry}`;
+    document.getElementById("tree-edit-original").textContent =
+      `From: ${originalCountry}`;
 
     renderEditableTree(treeEditState.currentTree);
 
@@ -2369,7 +2380,7 @@ function closeTreeEditModal() {
     currentTree: null,
     originalCountry: null,
     editedNodes: {},
-    selectedNode: null
+    selectedNode: null,
   };
 }
 
@@ -2380,10 +2391,13 @@ function renderEditableTree(flatJsonData, container = null, depth = 0) {
     container = editContainer;
   }
 
-  if (!flatJsonData || typeof flatJsonData !== 'object') return;
+  if (!flatJsonData || typeof flatJsonData !== "object") return;
 
   // Handle flat JSON structure: { country_name, fields, source_url, scraped_at }
-  if (flatJsonData.country_name && (flatJsonData.fields || flatJsonData.fields_array)) {
+  if (
+    flatJsonData.country_name &&
+    (flatJsonData.fields || flatJsonData.fields_array)
+  ) {
     // Root node
     const rootDiv = document.createElement("div");
     rootDiv.className = "tree-edit-node";
@@ -2391,7 +2405,7 @@ function renderEditableTree(flatJsonData, container = null, depth = 0) {
 
     const rootLabel = document.createElement("div");
     rootLabel.className = "tree-edit-node-label";
-    
+
     const rootIcon = document.createElement("span");
     rootIcon.className = "node-icon";
     rootIcon.textContent = "📋";
@@ -2416,15 +2430,17 @@ function renderEditableTree(flatJsonData, container = null, depth = 0) {
 
     if (flatJsonData.fields_array && Array.isArray(flatJsonData.fields_array)) {
       // Array format: convert to order array
-      fieldOrder = flatJsonData.fields_array.map(item => item.key);
+      fieldOrder = flatJsonData.fields_array.map((item) => item.key);
       fieldsObj = {};
-      flatJsonData.fields_array.forEach(item => {
+      flatJsonData.fields_array.forEach((item) => {
         fieldsObj[item.key] = item.value;
       });
     } else if (flatJsonData.fields) {
       // Dict format: use _field_order if available
       fieldsObj = flatJsonData.fields;
-      fieldOrder = flatJsonData._field_order ? flatJsonData._field_order : Object.keys(fieldsObj);
+      fieldOrder = flatJsonData._field_order
+        ? flatJsonData._field_order
+        : Object.keys(fieldsObj);
     } else {
       return;
     }
@@ -2434,16 +2450,23 @@ function renderEditableTree(flatJsonData, container = null, depth = 0) {
     fieldOrder.forEach((fieldName, index) => {
       const fieldValue = fieldsObj[fieldName];
       if (fieldValue !== undefined) {
-        const nodeDiv = renderFieldNodeElement(fieldName, fieldValue, fieldsObj, index);
+        const nodeDiv = renderFieldNodeElement(
+          fieldName,
+          fieldValue,
+          fieldsObj,
+          index,
+        );
         fieldNodes.push({ index, node: nodeDiv });
       }
     });
 
     // Append in correct order
-    fieldNodes.sort((a, b) => a.index - b.index).forEach(({ node }) => {
-      fieldsDiv.appendChild(node);
-    });
-    
+    fieldNodes
+      .sort((a, b) => a.index - b.index)
+      .forEach(({ node }) => {
+        fieldsDiv.appendChild(node);
+      });
+
     return;
   }
 
@@ -2472,7 +2495,9 @@ function renderEditableTree(flatJsonData, container = null, depth = 0) {
   if (flatJsonData.value) {
     const value = document.createElement("span");
     value.className = "node-value";
-    value.textContent = flatJsonData.value.substring(0, 30) + (flatJsonData.value.length > 30 ? "..." : "");
+    value.textContent =
+      flatJsonData.value.substring(0, 30) +
+      (flatJsonData.value.length > 30 ? "..." : "");
     label.appendChild(value);
   }
 
@@ -2497,9 +2522,9 @@ function renderFieldNodeElement(fieldName, fieldValue, fieldsObj, orderIndex) {
   nodeDiv.className = "tree-edit-node";
   nodeDiv.style.marginLeft = "20px";
   nodeDiv.setAttribute("data-field-order", orderIndex); // ✅ PRESERVE ORDER
-  
+
   const fieldObj = { name: fieldName, value: fieldValue };
-  
+
   nodeDiv.onclick = (e) => {
     e.stopPropagation();
     selectTreeNode(nodeDiv, fieldObj);
@@ -2520,7 +2545,8 @@ function renderFieldNodeElement(fieldName, fieldValue, fieldsObj, orderIndex) {
 
   const value = document.createElement("span");
   value.className = "node-value";
-  const displayValue = fieldValue.substring(0, 40) + (fieldValue.length > 40 ? "..." : "");
+  const displayValue =
+    fieldValue.substring(0, 40) + (fieldValue.length > 40 ? "..." : "");
   value.textContent = displayValue;
   label.appendChild(value);
 
@@ -2596,10 +2622,10 @@ function showNodeEditPanel(nodeData) {
 
 function editFieldValue(fieldName) {
   if (!treeEditState.currentTree || !treeEditState.currentTree.fields) return;
-  
+
   const currentValue = treeEditState.currentTree.fields[fieldName];
   const newValue = prompt(`Edit value for "${fieldName}":`, currentValue);
-  
+
   if (newValue !== null) {
     treeEditState.currentTree.fields[fieldName] = newValue;
     rerenderEditableTree();
@@ -2608,7 +2634,7 @@ function editFieldValue(fieldName) {
 
 function deleteField(fieldName) {
   if (!treeEditState.currentTree || !treeEditState.currentTree.fields) return;
-  
+
   if (confirm(`Delete field "${fieldName}"?`)) {
     delete treeEditState.currentTree.fields[fieldName];
     rerenderEditableTree();
@@ -2626,7 +2652,10 @@ function editNodeLabel() {
 
 function editNodeValue() {
   if (!treeEditState.selectedNode) return;
-  const newValue = prompt("Enter new value:", treeEditState.selectedNode.value || "");
+  const newValue = prompt(
+    "Enter new value:",
+    treeEditState.selectedNode.value || "",
+  );
   if (newValue !== null) {
     treeEditState.selectedNode.value = newValue;
     rerenderEditableTree();
@@ -2644,13 +2673,13 @@ function deleteNode() {
 
 function deleteNodeRecursive(parent, target) {
   if (!parent.children) return false;
-  
+
   const index = parent.children.findIndex((child) => child === target);
   if (index !== -1) {
     parent.children.splice(index, 1);
     return true;
   }
-  
+
   for (const child of parent.children) {
     if (deleteNodeRecursive(child, target)) return true;
   }
@@ -2681,15 +2710,18 @@ async function saveEditedTree() {
 
     console.log("[SAVE] Sending edited tree to server...");
     console.log("[SAVE] Country:", treeEditState.originalCountry);
-    console.log("[SAVE] Fields count:", Object.keys(editedTree.fields || {}).length);
+    console.log(
+      "[SAVE] Fields count:",
+      Object.keys(editedTree.fields || {}).length,
+    );
 
     const response = await fetch(`${API_BASE}/save-edited-tree`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         original_country: treeEditState.originalCountry,
-        edited_tree: editedTree
-      })
+        edited_tree: editedTree,
+      }),
     });
 
     const data = await response.json();
