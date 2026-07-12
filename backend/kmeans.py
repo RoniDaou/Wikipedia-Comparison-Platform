@@ -1,7 +1,5 @@
 """
-kmean.py — K-Medoids Clustering with t-SNE Visualization
-COE 543/743 — Intelligent Data Processing and Applications
-Spring 2026 — Instructor: Joe Tekli
+kmeans.py — K-Medoids clustering with t-SNE visualization.
 
 Contains:
   - TSNE2D        : t-SNE projection for scatter plot visualization only

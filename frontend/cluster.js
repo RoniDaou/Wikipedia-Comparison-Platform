@@ -1,6 +1,5 @@
 /* ═══════════════════════════════════════════════════════════════════════════
-   cluster.js  —  Project 2: ClusterNations Frontend
-   COE 543/743  ·  Lebanese American University  ·  Spring 2026
+   cluster.js — ClusterNations frontend application.
 
    API endpoints used:
      GET    /api/cluster/matrices                    — list all matrices

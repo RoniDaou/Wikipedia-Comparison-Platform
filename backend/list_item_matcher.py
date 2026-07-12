@@ -1,6 +1,5 @@
 """
-list_item_matcher.py — List Item Matching with Cost Matrix
-COE 543/743 — Wikipedia Infobox Comparison Project
+list_item_matcher.py — List-item matching with a cost matrix.
 
 Provides ListItemMatcher class for optimal matching of list items
 using cost matrix and bipartite assignment.

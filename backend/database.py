@@ -1,13 +1,12 @@
 """
-MongoDB Database Handler
-Manages storage and retrieval of country infobox data
-Project 2: stores MULTIPLE similarity matrices and cluster results (never overrides)
+MongoDB database handler for country infobox data, comparison artifacts,
+similarity matrices, cluster results, and application usage metrics.
 """
 import os
 from dotenv import load_dotenv
 
 load_dotenv()
-from pymongo import MongoClient, ASCENDING, DESCENDING
+from pymongo import MongoClient, ASCENDING, DESCENDING, ReturnDocument
 from typing import Dict, List, Optional
 from datetime import datetime, timezone
 import re
@@ -22,16 +21,16 @@ class WikipediaDatabase:
     def __init__(self, connection_string=None):
         if connection_string is None:
             connection_string = os.getenv("MONGO_URI")
-        self.client = MongoClient(connection_string)
+            
         self.client = MongoClient(connection_string)
         self.db = self.client['wikipedia_scraper']
         self.countries_collection   = self.db['countries']
         self.comparisons_collection = self.db['comparisons']
         self.editedcountries        = self.db['editedcountries']
-        self.comparisons            = self.comparisons_collection  # alias
-        # Project 2 — each matrix/result is its own document, never overwritten
+        self.comparisons            = self.comparisons_collection  # compatibility alias
         self.similarity_matrix_col  = self.db['similarity_matrix']
         self.cluster_results_col    = self.db['cluster_results']
+        self.metrics_collection     = self.db['application_metrics']
         self._create_indexes()
 
     # ══════════════════════════════════════════════════════════════════════
@@ -59,6 +58,7 @@ class WikipediaDatabase:
             ("algorithm", ASCENDING),
             ("saved_at",  DESCENDING)
         ])
+        self.metrics_collection.create_index([("updated_at", DESCENDING)])
 
     # ══════════════════════════════════════════════════════════════════════
     #  Name normalisation helpers
@@ -159,18 +159,55 @@ class WikipediaDatabase:
         docs = list(self.countries_collection.find({}, {'country_name': 1}))
         return sorted([d['country_name'] for d in docs if 'country_name' in d])
 
+    def _ensure_usage_metrics(self) -> None:
+        """Create the singleton metrics document without resetting existing data."""
+        baseline = self.comparisons_collection.count_documents({})
+        self.metrics_collection.update_one(
+            {'_id': 'usage'},
+            {
+                '$setOnInsert': {
+                    'total_comparisons': baseline,
+                    'created_at': datetime.now(timezone.utc).isoformat()
+                }
+            },
+            upsert=True
+        )
+
+    def record_comparisons(self, count: int = 1) -> int:
+        """Atomically add successful comparison operations to the usage total."""
+        count = int(count)
+        if count <= 0:
+            return self.get_comparison_count()
+
+        self._ensure_usage_metrics()
+        now = datetime.now(timezone.utc).isoformat()
+        metric = self.metrics_collection.find_one_and_update(
+            {'_id': 'usage'},
+            {
+                '$inc': {'total_comparisons': count},
+                '$set': {'updated_at': now}
+            },
+            return_document=ReturnDocument.AFTER
+        )
+        return int(metric.get('total_comparisons', 0)) if metric else 0
+
+    def get_comparison_count(self) -> int:
+        """Return the persistent number of successful comparison operations."""
+        self._ensure_usage_metrics()
+        metric = self.metrics_collection.find_one({'_id': 'usage'}) or {}
+        return int(metric.get('total_comparisons', 0))
+
     def get_statistics(self) -> Dict:
-        total_countries   = self.countries_collection.count_documents({})
-        total_comparisons = self.comparisons_collection.count_documents({})
+        total_countries = self.countries_collection.count_documents({})
         latest = self.countries_collection.find_one({}, sort=[('scraped_at', DESCENDING)])
         return {
-            'total_countries':   total_countries,
-            'total_comparisons': total_comparisons,
-            'last_scrape':       latest['scraped_at'] if latest else None
+            'total_countries': total_countries,
+            'total_comparisons': self.get_comparison_count(),
+            'last_scrape': latest['scraped_at'] if latest else None
         }
 
     # ══════════════════════════════════════════════════════════════════════
-    #  Comparisons / Edited trees  (unchanged from Project 1)
+    #  Comparisons and edited trees
     # ══════════════════════════════════════════════════════════════════════
 
     def comparison_country_name_exists(self, country_name: str) -> bool:
@@ -275,7 +312,7 @@ class WikipediaDatabase:
         return fields_array
 
     # ══════════════════════════════════════════════════════════════════════
-    #  PROJECT 2 — Similarity Matrix
+    #  Similarity matrices
     #  Each matrix is a separate MongoDB document with its own _id.
     #  Nothing is ever overwritten — you can have many matrices.
     # ══════════════════════════════════════════════════════════════════════
@@ -347,7 +384,7 @@ class WikipediaDatabase:
         return doc
 
     # ══════════════════════════════════════════════════════════════════════
-    #  PROJECT 2 — Cluster Results
+    #  Cluster results
     #  Each run is a separate document. Nothing is overwritten.
     # ══════════════════════════════════════════════════════════════════════
 

@@ -1,7 +1,5 @@
 """
-clustering.py — Project 2: Wikipedia Infobox Document Clustering
-COE 543/743 — Intelligent Data Processing and Applications
-Spring 2026 — Instructor: Joe Tekli
+clustering.py — Wikipedia infobox document clustering services.
 
 Entry point for all clustering operations.
 Imports and dispatches to:
@@ -860,7 +858,8 @@ class SimilarityMatrixBuilder:
             'count':     n,
             'built_at':  datetime.now(timezone.utc).isoformat(),
             'matrix_mode': 'feature_ted' if selected_features else 'full_ted',
-            'selected_features': selected_features
+            'selected_features': selected_features,
+            'comparisons_performed': total_pairs
         }
         # NOTE: do NOT save here — the ClusteringPipeline.build_and_save_matrix()
         # handles saving so we never double-insert.
@@ -952,7 +951,8 @@ class SimilarityMatrixBuilder:
             'count':     n_new,
             'built_at':  datetime.now(timezone.utc).isoformat(),
             'matrix_mode': 'full_ted',
-            'selected_features': []
+            'selected_features': [],
+            'comparisons_performed': total_pairs
         }
         # NOTE: do NOT save here — ClusteringPipeline handles saving.
         print(f"[Matrix] Extended to {n_new}×{n_new}.")
@@ -1008,6 +1008,7 @@ class ClusteringPipeline:
         names = country_names or sorted(self.db.get_country_names())
         doc   = self.builder.build(names, progress_callback, selected_features=selected_features)
         inserted_id = self.db.save_similarity_matrix(doc, name=name)
+        self.db.record_comparisons(doc.get('comparisons_performed', 0))
         doc['_id']  = inserted_id
         return doc
 
@@ -1035,6 +1036,7 @@ class ClusteringPipeline:
         doc = self.builder.build_incremental_extended(
             existing, new_names, merged, progress_callback)
         inserted_id = self.db.save_similarity_matrix(doc, name=name)
+        self.db.record_comparisons(doc.get('comparisons_performed', 0))
         doc['_id']  = inserted_id
         return doc
 

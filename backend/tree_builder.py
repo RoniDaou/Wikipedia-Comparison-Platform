@@ -1,6 +1,5 @@
 """
-tree_builder.py — Step 2: Document Pre-Processing
-COE 543/743 — Wikipedia Infobox Comparison Project
+tree_builder.py — Wikipedia infobox document preprocessing and tree construction.
 """
 
 import re

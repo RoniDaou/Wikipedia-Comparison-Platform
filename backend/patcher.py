@@ -1,6 +1,5 @@
 """
-patcher.py — Step 5: Document Tree Patching + Step 6: Post-Processing
-COE 543/743 — Wikipedia Infobox Comparison Project
+patcher.py — Document-tree patching and post-processing.
 
 Current design note:
 This patcher reconstructs the patched output using T2's structure when

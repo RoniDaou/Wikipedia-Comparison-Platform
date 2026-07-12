@@ -44,7 +44,7 @@ extractor    = EditScriptExtractor()       # Step 4
 pipeline     = PatchingPipeline()          # Steps 5 & 6
 patcher      = TreePatcher()
 processor    = PostProcessor()
-clustering_pipeline = ClusteringPipeline(db=db, comparator=comparator)  # Project 2
+clustering_pipeline = ClusteringPipeline(db=db, comparator=comparator)
 
 # ── Matrix build progress state ───────────────────────────────────────────
 _matrix_build_state = {
@@ -349,12 +349,16 @@ def compare_countries():
         # Report (no auto-save)
         report = comparator.generate_report(result)
 
+        # Count only completed comparisons. The increment is persistent and atomic.
+        total_comparisons = db.record_comparisons(1)
+
         return app.response_class(
             response=json.dumps({
                 'success':     True,
                 'comparison':  result,
                 'edit_script': es_dict,
-                'report':      report
+                'report':      report,
+                'total_comparisons': total_comparisons
             }, cls=MongoJSONEncoder),
             status=200,
             mimetype='application/json'
@@ -444,12 +448,16 @@ def compare_all_countries():
         
         # Sort by similarity (descending)
         results.sort(key=lambda x: x['similarity'], reverse=True)
+
+        # Count every successfully completed pair in the 1-vs-all operation.
+        total_comparisons_made = db.record_comparisons(len(results))
         
         return app.response_class(
             response=json.dumps({
                 'success': True,
                 'base_country': base_country_name,
                 'total_comparisons': len(results),
+                'comparison_count': total_comparisons_made,
                 'results': results
             }, cls=MongoJSONEncoder),
             status=200,
@@ -1007,7 +1015,7 @@ def get_cluster_features():
 # ─────────────────────────────────────────────
 #  Error handlers
 # ═══════════════════════════════════════════════════════════════════════════
-#  PROJECT 2 — Clustering Routes
+#  Clustering routes
 # ═══════════════════════════════════════════════════════════════════════════
 
 # ── Similarity Matrix — list / get / build / delete ──────────────────────
@@ -1433,20 +1441,12 @@ def internal_error(error):
 #  Run
 # ─────────────────────────────────────────────
 
-if __name__ == '__main__':
-    print("=" * 50)
-    print("Wikipedia Infobox Scraper API v2.0")
-    print("=" * 50)
-    print("API running at: http://localhost:5000")
-    print("Steps covered: 1 (scrape) · 2 (tree) · 3 (TED)")
-    print("               4 (edit script) · 5-6 (patch)")
-    print("               Project 2: clustering")
-    print("=" * 50)
-    import os
-
 if __name__ == "__main__":
     print("=" * 50)
-    print("Wikipedia Infobox Scraper API v2.0")
+    print("Wikipedia Data Intelligence API v2.0")
+    print("=" * 50)
+    print("API running at: http://localhost:5000")
+    print("Services: scraping, tree analysis, comparison, patching, and clustering")
     print("=" * 50)
 
     app.run(

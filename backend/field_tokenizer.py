@@ -1,6 +1,5 @@
 """
-field_tokenizer.py — Field Name Tokenization for Parameter Extraction
-COE 543/743 — Wikipedia Infobox Comparison Project
+field_tokenizer.py — Field-name tokenization for parameter extraction.
 
 Implements three types of field name tokenization:
 1. PARENTHESES: Field(param) -> base="field", params=["param"]

@@ -1,6 +1,5 @@
 """
-edit_script.py — Step 4: Edit Script Extraction
-COE 543/743 — Wikipedia Infobox Comparison Project
+edit_script.py — Edit script extraction for infobox tree comparisons.
 """
 
 import json

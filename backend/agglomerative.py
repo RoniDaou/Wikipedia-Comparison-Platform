@@ -1,6 +1,5 @@
 """
-agglomerative.py — Agglomerative Hierarchical Clustering for TED matrices
-COE 543/743 — Intelligent Data Processing and Applications
+agglomerative.py — Agglomerative hierarchical clustering for TED matrices.
 
 Pure-Python agglomerative clustering over a precomputed distance matrix.
 The algorithm never recomputes TED; it consumes the cached similarity matrix

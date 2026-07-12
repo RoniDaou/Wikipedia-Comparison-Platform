@@ -1,6 +1,5 @@
 """
-ted_comparator.py — Tree Edit Distance (TED) with Tokenization & Optimal List Matching
-COE 543/743 — Wikipedia Infobox Comparison Project
+ted_comparator.py — Tree Edit Distance with tokenization and optimal list matching.
 
 Implements Tree Edit Distance with:
 1. Field tokenization (Parentheses, Brackets, Underscore)

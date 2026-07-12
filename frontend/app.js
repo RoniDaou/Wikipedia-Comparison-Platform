@@ -348,7 +348,7 @@ function resetScrapingPanel() {
 
 async function loadStatistics() {
   try {
-    const data = await (await fetch(`${API_BASE}/statistics`)).json();
+    const data = await (await fetch(`${API_BASE}/statistics`, { cache: "no-store" })).json();
     if (data.success) {
       document.getElementById("total-countries").textContent =
         data.statistics.total_countries || 0;
@@ -756,6 +756,9 @@ async function compareCountries() {
       resultDiv.innerHTML = `<div class="error-message"><h3>❌ Error</h3><p>${compareData.error}</p></div>`;
       return;
     }
+
+    // Refresh the dashboard after the backend records the completed comparison.
+    await loadStatistics();
 
     // ───── EXTRACT COMPARISON DATA ─────
     const comp = compareData.comparison || {};
@@ -1852,6 +1855,7 @@ async function startCompareAll() {
     const data = await response.json();
 
     if (data.success) {
+      await loadStatistics();
       compareAllData.allResults = data.results;
       compareAllData.filteredResults = [...data.results];
 
