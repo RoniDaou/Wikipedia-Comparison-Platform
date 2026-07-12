@@ -1796,7 +1796,7 @@ let compareAllData = {
 
 async function populateBaseCountrySelect() {
   try {
-    const response = await fetch("http://localhost:5000/api/countries");
+    const response = await fetch(`${API_BASE}/countries`);
     const data = await response.json();
 
     if (data.success) {
@@ -1839,7 +1839,7 @@ async function startCompareAll() {
     `Comparing "${baseCountry}" against all countries...`;
 
   try {
-    const response = await fetch("http://localhost:5000/api/compare-all", {
+    const response = await fetch(`${API_BASE}/compare-all`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
