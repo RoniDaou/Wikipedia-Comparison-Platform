@@ -1645,7 +1645,6 @@ table tbody tr:hover td {
   margin: 0;
 }
 
-/* Fix country modal close button */
 .modal-content > .modal-close {
   position: sticky !important;
   top: 14px !important;
@@ -1666,7 +1665,6 @@ table tbody tr:hover td {
   box-sizing: border-box !important;
 }
 
-/* Fix VS text alignment */
 .compare-vs {
   display: flex !important;
   align-items: center !important;
@@ -1674,11 +1672,11 @@ table tbody tr:hover td {
 
   width: 42px !important;
   height: 42px !important;
-  margin-bottom: 1px !important;
   padding: 0 !important;
 
   line-height: 1 !important;
-  letter-spacing: 0 !important;
   text-align: center !important;
   box-sizing: border-box !important;
+
+  transform: translateY(2px) !important;
 }
