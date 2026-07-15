@@ -1648,7 +1648,7 @@ table tbody tr:hover td {
 /* Fix country modal close button */
 .modal-content > .modal-close {
   position: sticky !important;
-  top: 16px !important;
+  top: 14px !important;
   right: auto !important;
   float: none !important;
 
