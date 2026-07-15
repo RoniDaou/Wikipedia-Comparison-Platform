@@ -17,7 +17,7 @@
      GET    /api/statistics                         — DB stats
 ═══════════════════════════════════════════════════════════════════════════ */
 
-const API = "https://wikipedia-scraper-35tw.onrender.com";
+const API = "https://wikipedia-comparison-platform.onrender.com";
 
 /* ── App state ───────────────────────────────────────────────────────────── */
 const State = {

@@ -1,4 +1,4 @@
-const API_BASE = "https://wikipedia-scraper-35tw.onrender.com/api";
+const API_BASE = "https://wikipedia-comparison-platform.onrender.com/api";
 
 // ─────────────────────────────────────────────
 //  State
@@ -348,7 +348,9 @@ function resetScrapingPanel() {
 
 async function loadStatistics() {
   try {
-    const data = await (await fetch(`${API_BASE}/statistics`, { cache: "no-store" })).json();
+    const data = await (
+      await fetch(`${API_BASE}/statistics`, { cache: "no-store" })
+    ).json();
     if (data.success) {
       document.getElementById("total-countries").textContent =
         data.statistics.total_countries || 0;
