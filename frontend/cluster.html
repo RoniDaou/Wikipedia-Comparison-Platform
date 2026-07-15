@@ -1208,6 +1208,7 @@
         font-style: italic;
       }
     </style>
+    <link rel="stylesheet" href="redesign.css" />
   </head>
 
   <body>
@@ -1235,7 +1236,7 @@
             🔗 Compare
           </a>
         </div>
-        <div class="nav-badge">Data Intelligence Platform</div>
+        <div class="nav-badge">API connected</div>
       </div>
     </nav>
 
@@ -1262,26 +1263,27 @@
             >
               Build Similarity Matrix →
             </button>
-            <a
-              href="index.html"
-              class="btn-hero-primary"
-              style="
-                background: rgba(255, 255, 255, 0.18);
-                color: #fff;
-                border: 1px solid rgba(255, 255, 255, 0.4);
-                text-decoration: none;
-                padding: 13px 24px;
-                border-radius: 12px;
-                font-size: 0.95rem;
-                font-weight: 600;
-              "
-            >
-              ← Comparison
-            </a>
+            <a href="index.html" class="btn-hero-primary hero-secondary-action">← Comparison</a>
           </div>
         </div>
-        <div class="hero-image-wrap">
-          <img src="World.jpg" alt="World Map" class="hero-world-img" />
+        <div class="hero-image-wrap" aria-hidden="true">
+          <div class="hero-visual-shell">
+            <div class="hero-visual-topbar">
+              <span>Clustering analysis workspace</span>
+              <span class="hero-window-dots"><i></i><i></i><i></i></span>
+            </div>
+            <img src="World.jpg" alt="" class="hero-world-img" />
+            <div class="hero-data-card card-a">
+              <span class="hero-data-label">Algorithms</span>
+              <span class="hero-data-value">K-Medoids + AHC</span>
+              <span class="hero-data-meta">Multiple views</span>
+            </div>
+            <div class="hero-data-card card-b">
+              <span class="hero-data-label">Distance model</span>
+              <span class="hero-data-value">TED matrix</span>
+              <span class="hero-data-meta">Saved and reusable</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -1417,7 +1419,6 @@
                 onclick="clearSelectedFeatures()"
               >
                 Clear features
-              </button>
             </div>
 
             <div class="picker-wrap">
@@ -2015,7 +2016,7 @@
           >
         </div>
         <div class="footer-copy">
-          © 2026 ClusterNations · Data Intelligence Platform<br />
+          © 2026 ClusterNations · Country data intelligence<br />
           <span class="footer-sub"
             >Wikipedia infobox similarity analysis and country clustering</span
           >

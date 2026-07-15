@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>CompareNations — Country Infobox Analysis</title>
     <link rel="stylesheet" href="style.css" />
+    <link rel="stylesheet" href="redesign.css" />
   </head>
   <body>
     <nav class="navbar">
@@ -30,7 +31,7 @@
             🔗 Clustering
           </a>
         </div>
-        <div class="nav-badge">Data Intelligence Platform</div>
+        <div class="nav-badge">API connected</div>
       </div>
     </nav>
 
@@ -56,8 +57,24 @@
             </button>
           </div>
         </div>
-        <div class="hero-image-wrap">
-          <img src="World.jpg" alt="World Map" class="hero-world-img" />
+        <div class="hero-image-wrap" aria-hidden="true">
+          <div class="hero-visual-shell">
+            <div class="hero-visual-topbar">
+              <span>Global comparison workspace</span>
+              <span class="hero-window-dots"><i></i><i></i><i></i></span>
+            </div>
+            <img src="World.jpg" alt="" class="hero-world-img" />
+            <div class="hero-data-card card-a">
+              <span class="hero-data-label">Dataset coverage</span>
+              <span class="hero-data-value">193 nations</span>
+              <span class="hero-data-meta">UN member states</span>
+            </div>
+            <div class="hero-data-card card-b">
+              <span class="hero-data-label">Analysis engine</span>
+              <span class="hero-data-value">Tree Edit Distance</span>
+              <span class="hero-data-meta">Structure + content</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -87,28 +104,34 @@
           <h2>Data Collection</h2>
           <p>Scrape Wikipedia infoboxes for UN-recognized countries</p>
         </div>
-        <div class="action-section">
-          <h3>Single Country Scrape</h3>
-          <div class="form-group">
-            <input
-              type="text"
-              id="single-country"
-              placeholder="Enter country name (e.g., France)"
-            />
-            <button onclick="scrapeSingleCountry()" class="btn btn-primary">
-              Scrape Country
+        <div class="action-grid">
+          <section class="action-section">
+            <span class="action-kicker">Targeted collection</span>
+            <h3>Scrape a single country</h3>
+            <p>Collect or refresh one Wikipedia country infobox without affecting other records.</p>
+            <div class="form-group">
+              <input
+                type="text"
+                id="single-country"
+                placeholder="Enter a country name, for example France"
+                aria-label="Country name"
+              />
+              <button onclick="scrapeSingleCountry()" class="btn btn-primary">
+                Scrape country
+              </button>
+            </div>
+          </section>
+          <section class="action-section">
+            <span class="action-kicker">Full dataset</span>
+            <h3>Run a bulk collection</h3>
+            <p>Collect all 193 UN-recognized countries with duplicate-aware update options.</p>
+            <button onclick="scrapeAllCountries()" class="btn btn-warning">
+              Start bulk scrape
             </button>
-          </div>
-        </div>
-        <div class="action-section">
-          <h3>Bulk Scrape</h3>
-          <p>Scrape all UN-recognized countries (193 countries)</p>
-          <button onclick="scrapeAllCountries()" class="btn btn-warning">
-            Scrape All UN Countries
-          </button>
-          <div class="note">
-            ⚠️ This may take several minutes. Please be patient.
-          </div>
+            <div class="note">
+              This operation can take several minutes depending on network and server availability.
+            </div>
+          </section>
         </div>
         <div
           id="scrape-result"
@@ -124,27 +147,31 @@
             Select two countries to compare their Wikipedia infobox structures
           </p>
         </div>
-        <div class="compare-form">
-          <div class="form-group">
-            <label>Select First Country:</label>
-            <select id="country1-select">
-              <option value="">-- Select Country --</option>
-            </select>
+        <div class="workspace-card">
+          <div class="compare-form">
+            <div class="form-group">
+              <label for="country1-select">First country</label>
+              <select id="country1-select">
+                <option value="">Select a country</option>
+              </select>
+            </div>
+            <div class="compare-vs">VS</div>
+            <div class="form-group">
+              <label for="country2-select">Second country</label>
+              <select id="country2-select">
+                <option value="">Select a country</option>
+              </select>
+            </div>
           </div>
-          <div class="compare-vs">VS</div>
-          <div class="form-group">
-            <label>Select Second Country:</label>
-            <select id="country2-select">
-              <option value="">-- Select Country --</option>
-            </select>
+          <div class="workspace-actions">
+            <button onclick="compareCountries()" class="btn btn-primary">
+              Compare countries
+            </button>
+            <button onclick="compareAllCountries()" class="btn btn-secondary">
+              Compare first country to all
+            </button>
           </div>
         </div>
-        <button onclick="compareCountries()" class="btn btn-primary">
-          Compare Countries
-        </button>
-        <button onclick="compareAllCountries()" class="btn btn-secondary">
-          1 vs All
-        </button>
         <div
           id="comparison-result"
           class="result-panel"
@@ -159,17 +186,21 @@
             Select a country to compare against all other countries in the database
           </p>
         </div>
-        <div class="compare-all-form">
-          <div class="form-group">
-            <label>Select Country to Compare:</label>
-            <select id="base-country-select">
-              <option value="">-- Select Country --</option>
-            </select>
+        <div class="workspace-card">
+          <div class="compare-all-form">
+            <div class="form-group">
+              <label for="base-country-select">Base country</label>
+              <select id="base-country-select">
+                <option value="">Select a country</option>
+              </select>
+            </div>
+          </div>
+          <div class="workspace-actions">
+            <button onclick="startCompareAll()" class="btn btn-primary">
+              Compare against all countries
+            </button>
           </div>
         </div>
-        <button onclick="startCompareAll()" class="btn btn-primary">
-          Compare Against All
-        </button>
         
         <div id="compare-all-results" class="result-panel" style="display: none">
           <div class="compare-all-header">
@@ -198,14 +229,17 @@
           <h2>Browse Collected Data</h2>
           <p>Explore all scraped country infoboxes</p>
         </div>
-        <div class="form-group">
-          <input
-            type="text"
-            id="search-country"
-            placeholder="Search for a country..."
-          />
+        <div class="browse-toolbar">
+          <div class="form-group">
+            <label for="search-country">Search dataset</label>
+            <input
+              type="text"
+              id="search-country"
+              placeholder="Search for a country"
+            />
+          </div>
           <button onclick="searchCountry()" class="btn btn-primary">
-            Search
+            Search records
           </button>
         </div>
         <div id="country-list" class="country-list"></div>
@@ -230,7 +264,7 @@
           >
         </div>
         <div class="footer-copy">
-          © 2026 CompareNations · Data Intelligence Platform<br />
+          © 2026 CompareNations · Country data intelligence<br />
           <span class="footer-sub"
             >Wikipedia infobox collection, comparison, and structural analysis</span
           >
